@@ -20,7 +20,7 @@
 	};
 </script>
 
-<form on:submit|preventDefault>
+<form on:submit|preventDefault={() => {emit("save-config")}}>
 	<h1>
 		Speed:
 		<input
@@ -35,7 +35,7 @@
 			step="5"
 		/>
 	</h1>
-	<input type="submit" style="display:none" />
+	<input type="submit" value="Save" />
 </form>
 <Binding action="lClick" />
 <Binding action="rClick" />
