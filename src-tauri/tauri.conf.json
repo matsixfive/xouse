@@ -54,12 +54,18 @@
     },
     "windows": [
       {
-        "fullscreen": false,
+				"title": "Xouse",
+				"width": 800,
         "height": 600,
+				"fullscreen": false,
         "resizable": true,
-        "title": "xouse",
-        "width": 800
+				"visible": false
       }
-    ]
+    ],
+		"systemTray": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+			"menuOnLeftClick": false
+    }
   }
 }
