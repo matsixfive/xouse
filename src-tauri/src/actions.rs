@@ -109,9 +109,9 @@ pub fn deserialize_button(button: String) -> Button {
     }
 }
 
-impl Into<ActionType> for Action {
-    fn into(self) -> ActionType {
-        match self {
+impl From<Action> for ActionType {
+    fn from(val: Action) -> Self {
+        match val {
             Action::LClick => ActionType::UpDown((
                 Arc::new(Box::new(|_, _, _| unsafe {
                     kbm::mouse_event(kbm::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);

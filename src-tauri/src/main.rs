@@ -72,15 +72,15 @@ fn main() {
             let window = app.get_window("main").unwrap();
 
             let config_listener = Arc::clone(&config);
-            let speed_event = app.listen_global("speed-change", move |msg| {
+            let _speed_event = app.listen_global("speed-change", move |msg| {
                 let speed: f32 = msg.payload().unwrap().parse().unwrap();
                 let mut config = config_listener.lock().unwrap();
                 config.speed = speed;
             });
 
             let config_listener = Arc::clone(&config);
-            let speed_event = app.listen_global("save-config", move |_| {
-                let mut config = config_listener.lock().unwrap();
+            let _speed_event = app.listen_global("save-config", move |_| {
+                let config = config_listener.lock().unwrap();
                 config.save().unwrap();
             });
 
