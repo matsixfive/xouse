@@ -13,6 +13,10 @@ pub struct Config {
     pub speed_down: f32, // speed down multiplier
     #[serde(default = "speed_inc_default")]
     pub speed_inc: f32, // speed increment
+
+    #[serde(skip, default)]
+    pub gamepad_id: Option<gilrs::GamepadId>, // gamepad id
+
     #[serde(default)]
     pub actions: ActionMap, // map of actions to button presses
 }
@@ -41,6 +45,7 @@ impl Default for Config {
             speed_up: speed_up_default(),
             speed_down: speed_up_default(),
             speed_inc: speed_inc_default(),
+            gamepad_id: None,
             actions: ActionMap::default(),
         }
     }
