@@ -1,19 +1,32 @@
 <script lang="ts">
 	import DropDown from "./DropDown.svelte";
-	import { buttons, actions } from "./bindings";
-	import type { Action } from "./bindings";
+	import { buttons, actions as allActions } from "./bindings";
+	import type { AType, Button } from "./bindings";
 
-	export let action: Action;
-	let button: string = "";
+	export let button: Button;
+	export let action: AType;
 
-	const handleInput = (e: CustomEvent<string>) => {
-		button = e.detail;
+	const handleInput = (e: CustomEvent) => {
+		console.log(button, e.detail);
 	};
 </script>
 
 <div class="binding">
-	<div class="action">{actions[action]}</div>
-	<DropDown values={Object.entries(buttons)} on:input={handleInput} />
+	<div class="button">
+		<img
+			src={`buttons/xbox/colored/${button.toLowerCase()}.svg`}
+			alt={buttons[button]}
+			class="buttonIcon"
+		/>
+		<!-- <span class="buttonName">{buttons[button]}</span> -->
+	</div>
+	<div>
+		<DropDown
+			values={Object.entries(allActions)}
+			on:input={handleInput}
+			bind:selected={action}
+		/>
+	</div>
 </div>
 
 <style lang="scss">
@@ -22,9 +35,27 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
+
+		background-color: #333;
+		border-radius: 9999px;
+
+		> * {
+			padding: 0.3em;
+		}
 	}
 
-	.action {
+	.button {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+	}
+
+	.buttonName {
 		font-weight: 400;
+	}
+
+	.buttonIcon {
+		aspect-ratio: 1 / 1;
+		height: 3em;
 	}
 </style>

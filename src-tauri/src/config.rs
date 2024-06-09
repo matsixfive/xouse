@@ -3,7 +3,7 @@ use std::{io::Write, path::PathBuf};
 use crate::actions::ActionMap;
 use anyhow::Result;
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Config {
     #[serde(default = "speed_default")]
     pub speed: f32, // base speed
@@ -13,8 +13,8 @@ pub struct Config {
     pub speed_up: f32, // speed up multiplier
     #[serde(default = "speed_up_default")]
     pub speed_down: f32, // speed down multiplier
-    #[serde(default = "speed_inc_default")]
-    pub speed_inc: f32, // speed increment
+    #[serde(default = "speed_step_default")]
+    pub speed_step: f32, // speed increment
 
     #[serde(skip, default)]
     pub gamepad_id: Option<gilrs::GamepadId>, // gamepad id
@@ -35,7 +35,7 @@ const fn speed_up_default() -> f32 {
     3.0
 }
 
-const fn speed_inc_default() -> f32 {
+const fn speed_step_default() -> f32 {
     5.0
 }
 
@@ -46,7 +46,7 @@ impl Default for Config {
             speed_mult: speed_mult_default(),
             speed_up: speed_up_default(),
             speed_down: speed_up_default(),
-            speed_inc: speed_inc_default(),
+            speed_step: speed_step_default(),
             gamepad_id: None,
             actions: ActionMap::default(),
         }

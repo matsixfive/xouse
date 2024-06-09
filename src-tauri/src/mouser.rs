@@ -33,7 +33,7 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
     let effect = ff::EffectBuilder::new()
         .add_effect(ff::BaseEffect {
             kind: ff::BaseEffectType::Weak {
-                magnitude: u16::MAX / 2,
+                magnitude: u16::MAX,
             },
             scheduling: ff::Replay {
                 after: ff::Ticks::from_ms(0),
@@ -48,6 +48,7 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
     effect.set_repeat(ff::Repeat::For(duration)).unwrap();
 
     let rumble: Arc<Box<dyn Fn() + Send + Sync>> = Arc::new(Box::new(move || {
+        println!("rumbling");
         let _ = effect.play();
     }));
 
@@ -62,7 +63,6 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
 
     loop {
         let mut config = config_mx.lock().unwrap();
-        // println!("{:?}", config.actions.0);
         match config.gamepad_id {
             Some(id) => {
                 config.gamepad_id = gilrs.connected_gamepad(id).map(|gp| gp.id());
@@ -158,6 +158,11 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
             unsafe {
                 kbm::mouse_event(kbm::MOUSEEVENTF_MOVE, dx, dy, 0, 0);
             }
+        }
+
+        unsafe {
+            kbm::mouse_event(kbm::MOUSEEVENTF_WHEEL, 0, 0, head_and_tail(r_stick.y * 3.2 * config.speed_mult).0, 0);
+            kbm::mouse_event(kbm::MOUSEEVENTF_HWHEEL, 0, 0, head_and_tail(r_stick.x * 3.2 * config.speed_mult).0, 0);
         }
 
         std::mem::drop(config);

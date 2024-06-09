@@ -30,39 +30,21 @@ fn main() {
     let tray = tauri::SystemTray::new().with_menu(tray_menu);
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_speed, set_speed])
+        .invoke_handler(tauri::generate_handler![get_speed, set_speed, get_config])
         .system_tray(tray)
         .on_system_tray_event(|app, event| match event {
             SystemTrayEvent::LeftClick { .. } => {
-                let window = match app.get_window("main") {
-                    Some(window) => match window.is_visible().expect("winvis") {
-                        true => {
-                            window.hide().expect("winhide");
-                            return;
-                        }
-                        false => window,
-                    },
+                match app.get_window("main") {
+                    Some(window) => actions::toggle_window(&window),
                     None => return,
                 };
-                window.show().unwrap();
-                window.set_focus().unwrap();
             }
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 "hide" => {
-                    let window = match app.get_window("main") {
-                        Some(window) => match window.is_visible().expect("winvis") {
-                            true => {
-                                // hide the window instead of closing due to processes not closing memory leak: https://github.com/tauri-apps/wry/issues/590
-                                window.hide().expect("winhide");
-                                // window.close().expect("winclose");
-                                return;
-                            }
-                            false => window,
-                        },
+                    match app.get_window("main") {
+                        Some(window) => actions::toggle_window(&window),
                         None => return,
                     };
-                    window.show().unwrap();
-                    window.set_focus().unwrap();
                 }
                 "quit" => {
                     app.exit(0);
@@ -115,4 +97,10 @@ fn get_speed(state: tauri::State<AppState>) -> Result<f32, String> {
 fn set_speed(state: tauri::State<AppState>, speed: f32) {
     let mut config = state.0.lock().unwrap();
     config.speed = speed;
+}
+
+#[tauri::command]
+fn get_config(state: tauri::State<AppState>) -> Result<Config, String> {
+    let config = state.0.lock().unwrap();
+    Ok(config.clone())
 }
