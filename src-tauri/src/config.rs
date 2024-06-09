@@ -1,3 +1,5 @@
+use std::{io::Write, path::PathBuf};
+
 use crate::actions::ActionMap;
 use anyhow::Result;
 
@@ -22,7 +24,7 @@ pub struct Config {
 }
 
 const fn speed_default() -> f32 {
-    50.0
+    70.0
 }
 
 const fn speed_mult_default() -> f32 {
@@ -52,27 +54,44 @@ impl Default for Config {
 }
 
 impl Config {
+    pub fn config_dir() -> PathBuf {
+        tauri::api::path::config_dir()
+            .expect("Could not get config directory")
+            .join(if cfg!(windows) { "Xouse" } else { "xouse" })
+    }
+
+    pub fn config_file() -> PathBuf {
+        Self::config_dir().join("config.toml")
+    }
+
     pub fn save(&self) -> Result<()> {
         println!("Saving config");
-        let config_path = tauri::api::path::config_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not get config directory"))?;
-        let config_path = config_path.join("Xouse");
-        println!("Config path: {:?}", config_path);
-        std::fs::create_dir_all(&config_path)?;
-        let config_file = std::fs::File::create(config_path.join("config.json"))?;
-        serde_json::to_writer_pretty(config_file, self)?;
+
+        let config_dir_path = Self::config_dir();
+        println!("Config path: {:?}", config_dir_path);
+        std::fs::create_dir_all(&config_dir_path)?;
+
+        let config_file_path = Self::config_file();
+        let mut config_file = std::fs::File::create(config_file_path)?;
+
+        let stringified = toml::to_string(&self)?;
+        config_file.write_all(stringified.as_bytes())?;
+
         println!("Saved config");
         Ok(())
     }
 
     pub fn load() -> Result<Self> {
         println!("Loading config");
-        let config_path = tauri::api::path::config_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not get config directory"))?;
-        let config_path = config_path.join("Xouse");
-        println!("Config path: {:?}", config_path);
-        let config_file = std::fs::File::open(config_path.join("config.json"))?;
-        let config: Self = serde_json::from_reader(config_file)?;
+
+        let config_dir_path = Self::config_dir();
+        println!("Config path: {:?}", config_dir_path);
+        std::fs::create_dir_all(&config_dir_path)?;
+
+        let config_file_path = Self::config_file();
+        let config_text = std::fs::read_to_string(config_file_path)?;
+        let config: Self = toml::from_str(&config_text)?;
+
         println!("Loaded config");
         Ok(config)
     }

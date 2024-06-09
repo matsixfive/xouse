@@ -18,7 +18,7 @@ struct Vec2<T> {
     pub y: T,
 }
 
-const POLL_TIME_MS: u64 = 5;
+const POLL_TIME_MS: u64 = 1;
 const UNIT_MULTIPLIER: f32 = 0.02;
 
 pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()> {
@@ -57,11 +57,12 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
     let mut remainder = Vec2::<f32> { x: 0.0, y: 0.0 };
 
     let config = config_mx.lock().unwrap();
-    window.emit("speed-change", config.speed)?;
+    window.emit("speed_change", config.speed)?;
     std::mem::drop(config);
 
     loop {
         let mut config = config_mx.lock().unwrap();
+        // println!("{:?}", config.actions.0);
         match config.gamepad_id {
             Some(id) => {
                 config.gamepad_id = gilrs.connected_gamepad(id).map(|gp| gp.id());
@@ -86,16 +87,20 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
                     event: EventType::ButtonPressed(button, _),
                     ..
                 } => {
-                    let action = config.actions.0.get(&button).cloned();
+                    let actions = config.actions.0.get(&button).cloned();
                     std::mem::drop(config);
-                    match action {
-                        Some(action) => match action.into() {
-                            ActionType::Simple(f) => f(config_mx.clone(), &window, rumble.clone()),
-                            ActionType::UpDown((f, _)) => {
-                                f(config_mx.clone(), &window, rumble.clone())
+                    dbg!(&actions, &button);
+                    if let Some(actions) = actions {
+                        for action in actions {
+                            match action.into() {
+                                ActionType::Simple(f) => {
+                                    f(config_mx.clone(), &window, rumble.clone())
+                                }
+                                ActionType::UpDown((f, _)) => {
+                                    f(config_mx.clone(), &window, rumble.clone())
+                                }
                             }
-                        },
-                        None => {}
+                        }
                     }
                     config = config_mx.lock().unwrap();
                 }
@@ -104,16 +109,17 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
                     event: EventType::ButtonReleased(button, _),
                     ..
                 } => {
-                    let action = config.actions.0.get(&button).cloned();
+                    let actions = config.actions.0.get(&button).cloned();
                     std::mem::drop(config);
-                    match action {
-                        Some(action) => match action.into() {
-                            ActionType::Simple(_) => {}
-                            ActionType::UpDown((_, f)) => {
-                                f(config_mx.clone(), &window, rumble.clone())
+                    if let Some(actions) = actions {
+                        for action in actions {
+                            match action.into() {
+                                ActionType::Simple(_) => {}
+                                ActionType::UpDown((_, f)) => {
+                                    f(config_mx.clone(), &window, rumble.clone())
+                                }
                             }
-                        },
-                        None => {}
+                        }
                     }
                     config = config_mx.lock().unwrap();
                 }

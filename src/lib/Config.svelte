@@ -1,26 +1,35 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { emit, listen } from "@tauri-apps/api/event";
-    import Binding from "./Binding.svelte";
+	import Binding from "./Binding.svelte";
+	import { actionKeys } from "./bindings";
+	import { invoke } from "@tauri-apps/api";
 
 	let speed = 50;
 
 	onMount(async () => {
-		listen("speed-change", ({ payload }: { payload: number }) => {
+		invoke("get_speed").then((value: any) => {
+			if (value && typeof value === "number") speed = value;
+		});
+
+		listen("speed_change", ({ payload }: { payload: number }) => {
 			console.log(`Speed: ${payload}!`);
 			speed = payload;
 		});
 	});
 
-	const updateSpeed = async (value: number) => {
-		if (value) {
-			speed = value;
-			emit("speed-change", value);
+	const updateSpeed = async (speed: number) => {
+		if (speed) {
+			invoke("set_speed", { speed });
 		}
 	};
 </script>
 
-<form on:submit|preventDefault={() => {emit("save-config")}}>
+<form
+	on:submit|preventDefault={() => {
+		emit("save_config");
+	}}
+>
 	<h1>
 		Speed:
 		<input
@@ -31,14 +40,15 @@
 			}}
 			bind:value={speed}
 			min="0"
-			max="100"
+			max="150"
 			step="5"
 		/>
 	</h1>
 	<input type="submit" value="Save" />
 </form>
-<Binding action="lClick" />
-<Binding action="rClick" />
+{#each actionKeys as action}
+	<Binding {action} />
+{/each}
 
 <style lang="scss">
 	.num-input {

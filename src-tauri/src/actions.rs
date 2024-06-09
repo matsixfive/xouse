@@ -1,5 +1,6 @@
 use crate::config::Config;
 use gilrs::Button;
+use rdev::Key;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -17,17 +18,26 @@ pub enum ActionType {
 }
 
 #[derive(Debug)]
-pub struct ActionMap(pub HashMap<Button, Action>);
+pub struct ActionMap(pub HashMap<Button, Vec<Action>>);
 
 impl Default for ActionMap {
     fn default() -> Self {
         let map = HashMap::from([
-            (Button::South, Action::LClick),
-            (Button::East, Action::RClick),
-            (Button::DPadUp, Action::SpeedInc),
-            (Button::DPadDown, Action::SpeedDec),
-            (Button::RightTrigger2, Action::SpeedUp),
-            (Button::LeftTrigger2, Action::SpeedDown),
+            (Button::South, vec![Action::LClick]),
+            (Button::East, vec![Action::RClick]),
+            (Button::North, vec![Action::KeyPress(Key::Space, vec![])]),
+            (Button::DPadUp, vec![Action::SpeedInc]),
+            (Button::DPadDown, vec![Action::SpeedDec]),
+            (
+                Button::RightTrigger,
+                vec![Action::KeyPress(Key::Tab, vec![ModifierKey::Ctrl])],
+            ),
+            (
+                Button::LeftTrigger,
+                vec![Action::KeyPress(Key::Tab, vec![ModifierKey::Ctrl, ModifierKey::Shift])],
+            ),
+            (Button::RightTrigger2, vec![Action::SpeedUp]),
+            (Button::LeftTrigger2, vec![Action::SpeedDown]),
         ]);
         Self(map)
     }
@@ -42,6 +52,37 @@ pub enum Action {
     SpeedDown,
     SpeedInc,
     SpeedDec,
+    KeyPress(Key, Vec<ModifierKey>),
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub enum ModifierKey {
+    Alt,
+    Ctrl,
+    Win,
+    Shift,
+}
+
+impl Into<Key> for ModifierKey {
+    fn into(self) -> Key {
+        match self {
+            ModifierKey::Alt => Key::Alt,
+            ModifierKey::Ctrl => Key::ControlLeft,
+            ModifierKey::Win => Key::MetaLeft,
+            ModifierKey::Shift => Key::ShiftLeft,
+        }
+    }
+}
+
+impl Into<Key> for &ModifierKey {
+    fn into(self) -> Key {
+        match self {
+            ModifierKey::Alt => Key::Alt,
+            ModifierKey::Ctrl => Key::ControlLeft,
+            ModifierKey::Win => Key::MetaLeft,
+            ModifierKey::Shift => Key::ShiftLeft,
+        }
+    }
 }
 
 impl serde::Serialize for ActionMap {
@@ -56,7 +97,7 @@ impl serde::Serialize for ActionMap {
 
 impl<'d> serde::Deserialize<'d> for ActionMap {
     fn deserialize<D: serde::Deserializer<'d>>(deserializer: D) -> Result<Self, D::Error> {
-        let map = HashMap::<String, Action>::deserialize(deserializer)?;
+        let map = HashMap::<String, Vec<Action>>::deserialize(deserializer)?;
         let mut action_map = HashMap::new();
         for (button, action) in map {
             action_map.insert(deserialize_button(button), action);
@@ -114,17 +155,21 @@ impl From<Action> for ActionType {
         match val {
             Action::LClick => ActionType::UpDown((
                 Arc::new(Box::new(|_, _, _| unsafe {
+                    println!("click");
                     kbm::mouse_event(kbm::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                 })),
                 Arc::new(Box::new(|_, _, _| unsafe {
+                    println!("click up");
                     kbm::mouse_event(kbm::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                 })),
             )),
             Action::RClick => ActionType::UpDown((
                 Arc::new(Box::new(|_, _, _| unsafe {
+                    println!("rclick");
                     kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
                 })),
                 Arc::new(Box::new(|_, _, _| unsafe {
+                    println!("rclick up");
                     kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
                 })),
             )),
@@ -152,17 +197,49 @@ impl From<Action> for ActionType {
                 let config = &mut *config.lock().unwrap();
                 config.speed += config.speed_inc;
                 rumble();
-                window.emit("speed-change", config.speed).unwrap();
+                window.emit("speed_change", config.speed).unwrap();
             }))),
             Action::SpeedDec => ActionType::Simple(Arc::new(Box::new(|config, window, rumble| {
                 let config = &mut *config.lock().unwrap();
                 if config.speed > config.speed_inc {
                     config.speed -= config.speed_inc;
                     rumble();
-                    window.emit("speed-change", config.speed).unwrap();
+                    window.emit("speed_change", config.speed).unwrap();
                 }
             }))),
-            Action::MClick => todo!(),
+            Action::MClick => ActionType::UpDown((
+                Arc::new(Box::new(|_, _, _| unsafe {
+                    println!("mclick");
+                    kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
+                })),
+                Arc::new(Box::new(|_, _, _| unsafe {
+                    println!("mclick up");
+                    kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
+                })),
+            )),
+            Action::KeyPress(key, modifiers) => {
+                let modifiers2 = modifiers.clone();
+                ActionType::UpDown((
+                    Arc::new(Box::new(move |_, _, _| {
+                        println!("pressing {:?} with modifiers {:?}", key, modifiers);
+
+                        for modifier in &modifiers {
+                            let _ = rdev::simulate(&rdev::EventType::KeyPress(modifier.into()));
+                        }
+
+                        let _ = rdev::simulate(&rdev::EventType::KeyPress(key));
+                    })),
+                    Arc::new(Box::new(move |_, _, _| {
+                        println!("releasing {:?} with modifiers {:?}", key, modifiers2);
+
+                        let _ = rdev::simulate(&rdev::EventType::KeyRelease(key));
+
+                        for modifier in modifiers2.iter().rev() {
+                            let _ = rdev::simulate(&rdev::EventType::KeyRelease(modifier.into()));
+                        }
+                    })),
+                ))
+            }
         }
     }
 }

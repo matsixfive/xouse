@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DropDown from "./DropDown.svelte";
-import { buttons, actions } from "./bindings";
+	import { buttons, actions } from "./bindings";
 	import type { Action } from "./bindings";
 
 	export let action: Action;
