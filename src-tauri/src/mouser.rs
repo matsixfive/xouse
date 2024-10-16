@@ -2,7 +2,7 @@ use anyhow::Result;
 use gilrs::ff;
 use gilrs::{ev::Axis, Event, EventType, Gilrs};
 use std::sync::{Arc, Mutex};
-use std::thread::sleep;
+use std::thread;
 use std::time::Duration;
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
@@ -16,6 +16,18 @@ fn ease(x: f32) -> f32 {
 struct Vec2<T> {
     pub x: T,
     pub y: T,
+}
+
+impl<T> Default for Vec2<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        Self {
+            x: T::default(),
+            y: T::default(),
+        }
+    }
 }
 
 const POLL_TIME_MS: u64 = 1;
@@ -63,11 +75,40 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
 
     loop {
         let mut config = config_mx.lock().unwrap();
-        match config.gamepad_id {
-            Some(id) => {
-                config.gamepad_id = gilrs.connected_gamepad(id).map(|gp| gp.id());
+        // match config.gamepad_id {
+        //     Some(id) => {
+        //         config.gamepad_id = gilrs.connected_gamepad(id).map(|gp| gp.id());
+        //     }
+        //     None => {}
+        // }
+        // if gilrs.gamepads().count() == 0 {
+        //     println!("None");
+        //     config.gamepad_id = None;
+        //
+        //     l_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
+        //     r_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
+        //     remainder = Vec2::<f32> { x: 0.0, y: 0.0 };
+        //
+        //     continue;
+        // } else {
+        //     println!("Some");
+        // }
+
+        match (gilrs.gamepads().next(), config.gamepad_id) {
+            (Some((conn_id, _)), None) => {
+                config.gamepad_id = Some(conn_id);
+                println!("Connected gamepad id: {}", conn_id);
             }
-            None => {}
+            (None, _) => {
+                config.gamepad_id = None;
+
+                l_stick = Vec2::default();
+                r_stick = Vec2::default();
+                remainder = Vec2::default();
+                println!("No gamepad connected");
+                thread::sleep(Duration::from_millis(1000));
+            }
+            _ => {}
         }
 
         while let Some(event) = gilrs.next_event() {
@@ -137,6 +178,10 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
             };
         }
 
+        if config.gamepad_id.is_none() {
+            continue;
+        }
+
         let new_x = ease(l_stick.x)
             * config.speed
             * config.speed_mult
@@ -161,12 +206,24 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
         }
 
         unsafe {
-            kbm::mouse_event(kbm::MOUSEEVENTF_WHEEL, 0, 0, head_and_tail(r_stick.y * 3.2 * config.speed_mult).0, 0);
-            kbm::mouse_event(kbm::MOUSEEVENTF_HWHEEL, 0, 0, head_and_tail(r_stick.x * 3.2 * config.speed_mult).0, 0);
+            kbm::mouse_event(
+                kbm::MOUSEEVENTF_WHEEL,
+                0,
+                0,
+                head_and_tail(r_stick.y * 3.2 * config.speed_mult).0,
+                0,
+            );
+            kbm::mouse_event(
+                kbm::MOUSEEVENTF_HWHEEL,
+                0,
+                0,
+                head_and_tail(r_stick.x * 3.2 * config.speed_mult).0,
+                0,
+            );
         }
 
         std::mem::drop(config);
-        sleep(Duration::from_millis(POLL_TIME_MS));
+        thread::sleep(Duration::from_millis(POLL_TIME_MS));
     }
 }
 

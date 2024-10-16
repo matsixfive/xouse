@@ -2,7 +2,15 @@
 	import { onDestroy, onMount } from "svelte";
 	import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 	import Binding from "./Binding.svelte";
-	import { buttonKeys, Config, type A, type ConfigType } from "./bindings";
+	import {
+		Config,
+		type ActionType,
+		type ConfigType,
+		BasicAction,
+		type BasicActionType,
+		ClickAction,
+		KeypressAction,
+	} from "./bindings";
 	import { invoke } from "@tauri-apps/api";
 
 	let speed = 50;
@@ -10,27 +18,8 @@
 	let listeners: Promise<UnlistenFn>[] = [];
 
 	let config: ConfigType;
-	let cfg: Record<string, A> = {
-		South: ["None"],
-		East: ["None"],
-		West: ["None"],
-		North: ["None"],
-		DPadUp: ["None"],
-		DPadDown: ["None"],
-		DPadLeft: ["None"],
-		DPadRight: ["None"],
-		LeftTrigger2: ["None"],
-		RightTrigger2: ["None"],
-		LeftTrigger: ["None"],
-		RightTrigger: ["None"],
-		LeftThumb: ["None"],
-		RightThumb: ["None"],
-		Start: ["None"],
-		Select: ["None"],
-	};
 
 	$: console.log(config);
-	$: console.log(cfg);
 
 	// $: {if (config) config.actions = cfg}
 
@@ -40,10 +29,10 @@
 		});
 
 		invoke("get_config").then((v: unknown) => {
+			console.log(v);
 			const c = Config.parse(v);
 			if (!c) return;
 			config = c;
-			cfg = config.actions;
 		});
 
 		listeners.push(
@@ -66,6 +55,13 @@
 			invoke("set_speed", { speed });
 		}
 	};
+
+	const getActionType = (action: ActionType) => {
+		if (BasicAction.safeParse(action).success) return BasicAction;
+		if (ClickAction.safeParse(action).success) return ClickAction;
+		if (KeypressAction.safeParse(action).success) return KeypressAction;
+		return null;
+	};
 </script>
 
 <form
@@ -73,6 +69,12 @@
 		emit("save_config");
 	}}
 >
+	<input type="range" min="0" max="100" step="1" on:input={e => {
+			invoke("update_taskbar_progress", { progress: parseInt(e.currentTarget.value) / 100 });
+		}} />
+	<button on:click={() => {
+		invoke("clear_taskbar_progress");
+	}}>Reset</button>
 	<h1>
 		Speed:
 		<input
@@ -90,9 +92,27 @@
 	<input type="submit" value="Save" />
 </form>
 <div class="mappings">
-	{#each buttonKeys as button}
-		<Binding {button} bind:action={cfg[button][0]} />
-	{/each}
+	{#if config}
+		{#each Object.entries(config.actions) as [button, actions]}
+			<p>{button}</p>
+			{#each actions as action}
+				{#if getActionType(action) == BasicAction }
+					<li>{action}</li>
+				{:else if getActionType(action) == ClickAction}
+					<li>Click: {action.Click}</li>
+				{:else if getActionType(action) == KeypressAction}
+					<li>Key: {action.KeyPress[0]}
+						{#each action.KeyPress[1] as mod}
+							<li style="margin-left:10px;">{mod}</li>
+						{/each}
+					</li>
+				{/if}
+			{/each}
+		{/each}
+	{/if}
+	<!-- {#each buttonKeys as button} -->
+	<!-- 	<Binding {button} bind:action={cfg[button][0]} /> -->
+	<!-- {/each} -->
 </div>
 
 <style lang="scss">

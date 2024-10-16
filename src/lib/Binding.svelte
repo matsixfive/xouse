@@ -1,9 +1,10 @@
 <script lang="ts">
 	import DropDown from "./DropDown.svelte";
-	import { buttons, actions as allActions } from "./bindings";
-	import type { AType, Button } from "./bindings";
+    import type { AType } from "./bindings";
+	// import { buttons, actions as allActions } from "./bindings";
+	// import type { AType, Button } from "./bindings";
 
-	export let button: Button;
+	export let button: any;
 	export let action: AType;
 
 	const handleInput = (e: CustomEvent) => {
@@ -15,17 +16,17 @@
 	<div class="button">
 		<img
 			src={`buttons/xbox/colored/${button.toLowerCase()}.svg`}
-			alt={buttons[button]}
+			alt={button}
 			class="buttonIcon"
 		/>
 		<!-- <span class="buttonName">{buttons[button]}</span> -->
 	</div>
 	<div>
-		<DropDown
-			values={Object.entries(allActions)}
-			on:input={handleInput}
-			bind:selected={action}
-		/>
+		<!-- <DropDown -->
+		<!-- 	values={Object.entries(allActions)} -->
+		<!-- 	on:input={handleInput} -->
+		<!-- 	bind:selected={action} -->
+		<!-- /> -->
 	</div>
 </div>
 
