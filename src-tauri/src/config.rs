@@ -1,7 +1,7 @@
-use std::{io::Write, path::PathBuf};
-
 use crate::actions::ActionMap;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use std::{io::Write, path::PathBuf};
+use tauri::{AppHandle, Manager};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Config {
@@ -21,6 +21,9 @@ pub struct Config {
 
     #[serde(default)]
     pub actions: ActionMap, // map of actions to button presses
+
+    #[serde(skip)]
+    config_dir: Option<PathBuf>,
 }
 
 const fn speed_default() -> f32 {
@@ -49,30 +52,35 @@ impl Default for Config {
             speed_step: speed_step_default(),
             gamepad_id: None,
             actions: ActionMap::default(),
+            config_dir: None,
         }
     }
 }
 
 impl Config {
-    pub fn config_dir() -> PathBuf {
-        tauri::api::path::config_dir()
+    fn config_dir(app_handle: &AppHandle) -> PathBuf {
+        app_handle
+            .path()
+            .app_config_dir()
             .expect("Could not get config directory")
             .join(if cfg!(windows) { "Xouse" } else { "xouse" })
     }
 
-    pub fn config_file() -> PathBuf {
-        Self::config_dir().join("config.toml")
+    fn config_file(&self) -> Option<PathBuf> {
+        Some(self.config_dir.as_ref()?.join("config.toml"))
+    }
+
+    fn with_config_file(config_dir: &PathBuf) -> PathBuf {
+        config_dir.join("config.toml")
     }
 
     pub fn save(&self) -> Result<()> {
         println!("Saving config");
 
-        let config_dir_path = Self::config_dir();
-        println!("Config path: {:?}", config_dir_path);
-        std::fs::create_dir_all(&config_dir_path)?;
-
-        let config_file_path = Self::config_file();
-        let mut config_file = std::fs::File::create(config_file_path)?;
+        let config_dir = &self.config_dir.as_ref().ok_or(anyhow!("Config directory not set"))?;
+        println!("Config path: {:?}", &self.config_dir);
+        std::fs::create_dir_all(&config_dir)?;
+        let mut config_file = std::fs::File::create(Self::with_config_file(config_dir))?;
 
         let stringified = toml::to_string(&self)?;
         config_file.write_all(stringified.as_bytes())?;
@@ -81,14 +89,14 @@ impl Config {
         Ok(())
     }
 
-    pub fn load() -> Result<Self> {
+    pub fn load(app_handle: &AppHandle) -> Result<Self> {
         println!("Loading config");
 
-        let config_dir_path = Self::config_dir();
+        let config_dir_path = Self::config_dir(app_handle);
         println!("Config path: {:?}", config_dir_path);
         std::fs::create_dir_all(&config_dir_path)?;
 
-        let config_file_path = Self::config_file();
+        let config_file_path = Self::with_config_file(&config_dir_path);
         let config_text = std::fs::read_to_string(config_file_path)?;
         let config: Self = toml::from_str(&config_text)?;
 

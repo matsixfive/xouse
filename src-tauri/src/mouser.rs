@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
+use tauri::Emitter;
 
 use crate::actions::ActionType;
 use crate::config::Config;
@@ -33,7 +34,7 @@ where
 const POLL_TIME_MS: u64 = 1;
 const UNIT_MULTIPLIER: f32 = 0.02;
 
-pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()> {
+pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Result<()> {
     let mut gilrs = Gilrs::new().unwrap();
 
     let support_ff = gilrs
@@ -135,10 +136,10 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
                         for action in actions {
                             match action.into() {
                                 ActionType::Simple(f) => {
-                                    f(config_mx.clone(), &window, rumble.clone())
+                                    f(config_mx.clone(), &window, Some(rumble.clone()))
                                 }
                                 ActionType::UpDown((f, _)) => {
-                                    f(config_mx.clone(), &window, rumble.clone())
+                                    f(config_mx.clone(), &window, Some(rumble.clone()))
                                 }
                             }
                         }
@@ -157,7 +158,7 @@ pub fn start(window: tauri::Window, config_mx: Arc<Mutex<Config>>) -> Result<()>
                             match action.into() {
                                 ActionType::Simple(_) => {}
                                 ActionType::UpDown((_, f)) => {
-                                    f(config_mx.clone(), &window, rumble.clone())
+                                    f(config_mx.clone(), &window, Some(rumble.clone()))
                                 }
                             }
                         }

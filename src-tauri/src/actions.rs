@@ -5,11 +5,15 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use tauri::Window;
+use tauri::{Emitter, WebviewWindow, Window};
+
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
-pub type ActionFn =
-    Box<dyn Fn(Arc<Mutex<Config>>, &Window, Arc<Box<dyn Fn() + Send + Sync>>) + Send + Sync>;
+pub type ActionFn = Box<
+    dyn Fn(Arc<Mutex<Config>>, &WebviewWindow, Option<Arc<Box<dyn Fn() + Send + Sync>>>)
+        + Send
+        + Sync,
+>;
 
 #[derive(Clone)]
 pub enum ActionType {
@@ -254,7 +258,11 @@ impl From<Action> for ActionType {
                     })),
                 ))
             }
-            Action::Rumble => ActionType::Simple(Arc::new(Box::new(|_, _, rumble| rumble()))),
+            Action::Rumble => ActionType::Simple(Arc::new(Box::new(|_, _, rumble| {
+                if let Some(rumble) = rumble {
+                    rumble();
+                }
+            }))),
             Action::ToggleVis => {
                 ActionType::Simple(Arc::new(Box::new(|_, window, _| toggle_window(window))))
             }
@@ -262,13 +270,11 @@ impl From<Action> for ActionType {
     }
 }
 
-pub fn toggle_window(window: &Window) {
-    if window.is_visible().expect("winvis") {
-        {
-            window.hide().expect("winhide");
-            return;
-        }
-    };
-    window.show().unwrap();
-    window.set_focus().unwrap();
+pub fn toggle_window(webview_window: &WebviewWindow) {
+    if let Ok(true) = webview_window.is_visible() {
+        let _ = webview_window.hide();
+    } else {
+        let _ = webview_window.show();
+        let _ = webview_window.set_focus();
+    }
 }
