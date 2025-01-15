@@ -2,70 +2,67 @@
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:5173",
-    "distDir": "../dist"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
   },
-  "package": {
-    "productName": "Xouse",
-    "version": "0.1.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "copyright": "",
+    "targets": "all",
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
     },
-    "bundle": {
-      "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
+    "longDescription": "",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [],
+    "shortDescription": "",
+    "linux": {
       "deb": {
         "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "com.matsixfive.xouse",
-      "longDescription": "",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
       }
+    }
+  },
+  "productName": "Xouse",
+  "mainBinaryName": "Xouse",
+  "version": "0.1.0",
+  "identifier": "com.matsixfive.xouse",
+  "plugins": {},
+  "app": {
+    "windows": [
+      {
+        "title": "Xouse",
+        "width": 800,
+        "height": 600,
+        "fullscreen": false,
+        "resizable": true,
+        "visible": false,
+        "useHttpsScheme": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false
     },
     "security": {
       "csp": null
-    },
-    "updater": {
-      "active": false
-    },
-    "windows": [
-      {
-				"title": "Xouse",
-				"width": 800,
-        "height": 600,
-				"fullscreen": false,
-        "resizable": true,
-				"visible": false
-      }
-    ],
-		"systemTray": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": true,
-			"menuOnLeftClick": false
     }
   }
 }

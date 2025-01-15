@@ -11,7 +11,7 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
-use taskbar::{update_taskbar_progress, clear_taskbar_progress};
+use taskbar::{clear_taskbar_progress, update_taskbar_progress};
 use tauri::{Manager, SystemTrayEvent};
 
 struct AppState(Arc<Mutex<Config>>);
@@ -32,7 +32,13 @@ fn main() {
     let tray = tauri::SystemTray::new().with_menu(tray_menu);
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_speed, set_speed, get_config, update_taskbar_progress, clear_taskbar_progress])
+        .invoke_handler(tauri::generate_handler![
+            get_speed,
+            set_speed,
+            get_config,
+            update_taskbar_progress,
+            clear_taskbar_progress
+        ])
         .system_tray(tray)
         .on_system_tray_event(|app, event| match event {
             SystemTrayEvent::LeftClick { .. } => {
