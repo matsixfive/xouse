@@ -76,7 +76,7 @@ fn main() {
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     "hide" => {
                         if let Some(webview_window) = app.get_webview_window("main") {
-                            if let Ok(true) = webview_window.is_visible() {
+                            if hide.is_checked().unwrap_or(false) {
                                 let _ = webview_window.hide();
                             } else {
                                 let _ = webview_window.show();
