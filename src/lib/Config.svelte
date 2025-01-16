@@ -11,7 +11,7 @@
 		ClickAction,
 		KeypressAction,
 	} from "./bindings";
-	import { invoke } from "@tauri-apps/api";
+	import { invoke } from "@tauri-apps/api/core";
 
 	let speed = 50;
 
