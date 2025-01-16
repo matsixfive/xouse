@@ -61,7 +61,7 @@ impl Config {
     fn config_dir(app_handle: &AppHandle) -> PathBuf {
         app_handle
             .path()
-            .app_config_dir()
+            .config_dir()
             .expect("Could not get config directory")
             .join(if cfg!(windows) { "Xouse" } else { "xouse" })
     }
