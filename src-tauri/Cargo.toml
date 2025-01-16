@@ -23,7 +23,7 @@ tokio = "1.35.1"
 anyhow = "1.0.79"
 toml = "0.8.14"
 rdev = { version = "0.5.3", features = ["serde", "serialize"] }
-mlua = { version = "0.8.10", features = ["luajit"] }
+mlua = { version = "0.8.10", features = ["luajit", "vendored"] }
 
 [dependencies.windows]
 version = "0.52"
