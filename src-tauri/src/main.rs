@@ -59,7 +59,7 @@ fn main() {
                 mouser::start(window, thread_config).unwrap();
             });
 
-            let hide = tauri::menu::MenuItemBuilder::with_id("hide", "Show/Hide").build(app)?;
+            let hide = tauri::menu::CheckMenuItemBuilder::with_id("hide", "Hide").build(app)?;
             let quit = tauri::menu::MenuItemBuilder::with_id("quit", "Quit").build(app)?;
             let tray_menu = tauri::menu::MenuBuilder::new(app)
                 .items(&[&hide])
@@ -84,6 +84,10 @@ fn main() {
                     "quit" => {
                         dbg!("Quit");
                         app.exit(0);
+                    }
+                    "test" => {
+                        dbg!("Test");
+                        dbg!(event);
                     }
                     _ => eprintln!("Unknown tray event: {:?}", event),
                 })
