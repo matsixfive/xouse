@@ -180,6 +180,9 @@ pub enum UpDownAction {
         key: rdev::Key,
         modifiers: Vec<ModifierKey>,
     },
+    LuaScript {
+        script: String,
+    },
 }
 
 pub trait Rumbler {
@@ -208,29 +211,43 @@ impl SimpleActionFn for SimpleAction {
 }
 
 pub trait UpDownActionFn {
-    fn up(&self, state: &ActionInterface);
     fn down(&self, state: &ActionInterface);
+    fn up(&self, state: &ActionInterface);
 }
 
 impl UpDownActionFn for UpDownAction {
-    fn up(&self, state: &ActionInterface) {
-        match self {
-            UpDownAction::Click(button) => todo!(),
-            UpDownAction::SpeedUp => todo!(),
-            UpDownAction::SpeedDown => todo!(),
-            UpDownAction::KeyPress {
-                key: key,
-                modifiers: mods,
-            } => todo!(),
-        }
-    }
-
     fn down(&self, state: &ActionInterface) {
         match self {
             UpDownAction::Click(button) => todo!(),
             UpDownAction::SpeedUp => todo!(),
             UpDownAction::SpeedDown => todo!(),
             UpDownAction::KeyPress { key, modifiers } => todo!(),
+            UpDownAction::LuaScript { script } => {
+                let lua = mlua::Lua::new();
+
+                let f = lua
+                    .create_function(|_, ()| -> mlua::Result<i32> {
+                        println!("running 69");
+                        Ok(69)
+                    })
+                    .expect("Failed to create function");
+
+                lua.globals()
+                    .set("rust_func", f)
+                    .expect("Failed to set global");
+
+                let _ = lua.load(script.as_str()).exec();
+            }
+        }
+    }
+
+    fn up(&self, state: &ActionInterface) {
+        match self {
+            UpDownAction::Click(button) => todo!(),
+            UpDownAction::SpeedUp => todo!(),
+            UpDownAction::SpeedDown => todo!(),
+            UpDownAction::KeyPress { key, modifiers } => todo!(),
+            UpDownAction::LuaScript { script } => todo!(),
         }
     }
 }
