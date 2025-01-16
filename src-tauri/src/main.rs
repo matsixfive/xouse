@@ -64,8 +64,10 @@ fn main() {
             let tray_menu = tauri::menu::MenuBuilder::new(app)
                 .items(&[&hide])
                 .separator()
+                .check("test", "Test")
                 .items(&[&quit])
                 .build()?;
+
             let tray = tauri::tray::TrayIconBuilder::new()
                 .menu(&tray_menu)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
