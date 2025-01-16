@@ -4,15 +4,15 @@
 mod actions;
 mod actions2;
 mod config;
-mod mouser;
 mod lua;
+mod mouser;
 
 use config::Config;
 use std::{
     sync::{Arc, Mutex},
     thread,
 };
-use tauri::{Emitter, Listener, Manager};
+use tauri::{menu, Emitter, Listener, Manager};
 
 struct AppState(Arc<Mutex<Config>>);
 
@@ -59,17 +59,20 @@ fn main() {
                 mouser::start(window, thread_config).unwrap();
             });
 
-            let hide = tauri::menu::CheckMenuItemBuilder::with_id("hide", "Hide").build(app)?;
-            let quit = tauri::menu::MenuItemBuilder::with_id("quit", "Quit").build(app)?;
-            let tray_menu = tauri::menu::MenuBuilder::new(app)
+            let hide = menu::CheckMenuItemBuilder::with_id("hide", "Hide").build(app)?;
+            let quit = menu::MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+            let tray_menu = menu::MenuBuilder::new(app)
                 .items(&[&hide])
                 .separator()
                 .check("test", "Test")
                 .items(&[&quit])
                 .build()?;
 
-            let tray = tauri::tray::TrayIconBuilder::new()
+            let icon = tauri::image::Image::new(include_bytes!("../icons/128x128.png"), 128, 128);
+
+            let _tray = tauri::tray::TrayIconBuilder::new()
                 .menu(&tray_menu)
+                .icon(icon)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     "hide" => {
                         if let Some(webview_window) = app.get_webview_window("main") {
