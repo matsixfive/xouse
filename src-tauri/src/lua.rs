@@ -14,6 +14,5 @@ pub fn test_lua() -> anyhow::Result<()> {
 "#,
         )
         .exec();
-
-    unreachable!()
+    Ok(())
 }
