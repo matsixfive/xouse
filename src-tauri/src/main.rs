@@ -2,8 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod actions;
+mod actions2;
 mod config;
 mod mouser;
+mod lua;
 
 use config::Config;
 use std::{
@@ -15,6 +17,7 @@ use tauri::{Emitter, Listener, Manager};
 struct AppState(Arc<Mutex<Config>>);
 
 fn main() {
+    lua::test_lua().unwrap();
     // let loaded_config = Config::load().unwrap_or_else(|e| {
     //     let config = Config::default();
     //     eprintln!("Could not load config: {}", e);

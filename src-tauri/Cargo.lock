@@ -179,6 +179,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bstr"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1942,6 +1951,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "mlua"
+version = "0.8.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bb37b0ba91f017aa7ca2b98ef99496827770cd635b4a932a6047c5b4bbe678e"
+dependencies = [
+ "bstr",
+ "cc",
+ "num-traits",
+ "once_cell",
+ "pkg-config",
+ "rustc-hash",
+]
+
+[[package]]
 name = "muda"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2832,6 +2855,12 @@ name = "rustc-demangle"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "719b953e2095829ee67db738b3bfa9fa368c94900df327b3f07fe6e794d2fe1f"
+
+[[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc_version"
@@ -4621,6 +4650,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "gilrs",
+ "mlua",
  "rdev",
  "serde",
  "serde_json",

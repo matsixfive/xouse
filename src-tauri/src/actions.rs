@@ -1,11 +1,10 @@
 use crate::config::Config;
 use gilrs::Button;
-use rdev::Key;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use tauri::{Emitter, WebviewWindow, Window};
+use tauri::{Emitter, WebviewWindow};
 
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
@@ -29,20 +28,23 @@ impl Default for ActionMap {
         let map = HashMap::from([
             (Button::South, vec![Action::Click(MouseButton::Left)]),
             (Button::East, vec![Action::Click(MouseButton::Right)]),
-            (Button::North, vec![Action::KeyPress(Key::Space, vec![])]),
+            (
+                Button::North,
+                vec![Action::KeyPress(rdev::Key::Space, vec![])],
+            ),
             (Button::DPadUp, vec![Action::SpeedInc, Action::Rumble]),
             (Button::DPadDown, vec![Action::SpeedDec, Action::Rumble]),
             (
                 Button::RightTrigger,
                 vec![
-                    Action::KeyPress(Key::Tab, vec![ModifierKey::Ctrl]),
+                    Action::KeyPress(rdev::Key::Tab, vec![ModifierKey::Ctrl]),
                     Action::Rumble,
                 ],
             ),
             (
                 Button::LeftTrigger,
                 vec![
-                    Action::KeyPress(Key::Tab, vec![ModifierKey::Ctrl, ModifierKey::Shift]),
+                    Action::KeyPress(rdev::Key::Tab, vec![ModifierKey::Ctrl, ModifierKey::Shift]),
                     Action::Rumble,
                 ],
             ),
@@ -68,7 +70,7 @@ pub enum Action {
     SpeedDown,
     SpeedInc,
     SpeedDec,
-    KeyPress(Key, Vec<ModifierKey>),
+    KeyPress(rdev::Key, Vec<ModifierKey>),
     Rumble,
     ToggleVis,
 }
@@ -81,24 +83,19 @@ pub enum ModifierKey {
     Shift,
 }
 
-impl Into<Key> for ModifierKey {
-    fn into(self) -> Key {
-        match self {
-            ModifierKey::Alt => Key::Alt,
-            ModifierKey::Ctrl => Key::ControlLeft,
-            ModifierKey::Win => Key::MetaLeft,
-            ModifierKey::Shift => Key::ShiftLeft,
-        }
+impl Into<rdev::Key> for ModifierKey {
+    fn into(self) -> rdev::Key {
+        <&ModifierKey>::into(&self)
     }
 }
 
-impl Into<Key> for &ModifierKey {
-    fn into(self) -> Key {
+impl Into<rdev::Key> for &ModifierKey {
+    fn into(self) -> rdev::Key {
         match self {
-            ModifierKey::Alt => Key::Alt,
-            ModifierKey::Ctrl => Key::ControlLeft,
-            ModifierKey::Win => Key::MetaLeft,
-            ModifierKey::Shift => Key::ShiftLeft,
+            ModifierKey::Alt => rdev::Key::Alt,
+            ModifierKey::Ctrl => rdev::Key::ControlLeft,
+            ModifierKey::Win => rdev::Key::MetaLeft,
+            ModifierKey::Shift => rdev::Key::ShiftLeft,
         }
     }
 }

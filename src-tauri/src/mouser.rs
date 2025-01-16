@@ -4,10 +4,11 @@ use gilrs::{ev::Axis, Event, EventType, Gilrs};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 use tauri::Emitter;
+use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
 use crate::actions::ActionType;
+use crate::actions2::{Action, SimpleActionFn, UpDownActionFn};
 use crate::config::Config;
 
 fn ease(x: f32) -> f32 {
@@ -129,19 +130,19 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     event: EventType::ButtonPressed(button, _),
                     ..
                 } => {
-                    let actions = config.actions.0.get(&button).cloned();
+                    let actions = config.actions[button].clone();
                     std::mem::drop(config);
                     dbg!(&actions, &button);
-                    if let Some(actions) = actions {
-                        for action in actions {
-                            match action.into() {
-                                ActionType::Simple(f) => {
-                                    f(config_mx.clone(), &window, Some(rumble.clone()))
-                                }
-                                ActionType::UpDown((f, _)) => {
-                                    f(config_mx.clone(), &window, Some(rumble.clone()))
-                                }
-                            }
+
+                    let action_interface = crate::actions2::ActionInterface {
+                        config: config_mx.clone(),
+                        window: window.clone(),
+                        rumble: None,
+                    };
+                    for action in actions {
+                        match action {
+                            Action::Simple(action) => action.call(&action_interface),
+                            Action::UpDown(action) => action.down(&action_interface),
                         }
                     }
                     config = config_mx.lock().unwrap();
@@ -151,16 +152,19 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     event: EventType::ButtonReleased(button, _),
                     ..
                 } => {
-                    let actions = config.actions.0.get(&button).cloned();
+                    let actions = config.actions[button].clone();
                     std::mem::drop(config);
-                    if let Some(actions) = actions {
-                        for action in actions {
-                            match action.into() {
-                                ActionType::Simple(_) => {}
-                                ActionType::UpDown((_, f)) => {
-                                    f(config_mx.clone(), &window, Some(rumble.clone()))
-                                }
-                            }
+                    dbg!(&actions, &button);
+
+                    let action_interface = crate::actions2::ActionInterface {
+                        config: config_mx.clone(),
+                        window: window.clone(),
+                        rumble: None,
+                    };
+                    for action in actions {
+                        match action {
+                            Action::UpDown(action) => action.up(&action_interface),
+                            _ => (),
                         }
                     }
                     config = config_mx.lock().unwrap();
