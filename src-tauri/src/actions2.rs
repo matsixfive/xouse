@@ -250,7 +250,7 @@ impl UpDownActionFn for UpDownAction {
             UpDownAction::SpeedUp => todo!(),
             UpDownAction::SpeedDown => todo!(),
             UpDownAction::KeyPress { key, modifiers } => todo!(),
-            UpDownAction::LuaScript { script } => todo!(),
+            UpDownAction::LuaScript { script } => {},
         }
     }
 }
