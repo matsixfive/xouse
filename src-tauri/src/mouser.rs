@@ -38,6 +38,12 @@ const UNIT_MULTIPLIER: f32 = 0.02;
 pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Result<()> {
     let mut gilrs = Gilrs::new().unwrap();
 
+    // print all connected gamepads
+    for (id, gp) in gilrs.gamepads() {
+        println!("Connected gamepad id: {}", id);
+        println!("Gamepad: {}", gp.name());
+    }
+
     let support_ff = gilrs
         .gamepads()
         .filter_map(|(id, gp)| if gp.is_ff_supported() { Some(id) } else { None })
