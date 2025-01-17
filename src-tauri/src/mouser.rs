@@ -103,6 +103,8 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         // } else {
         //     println!("Some");
         // }
+        
+        println!("looping");
 
         match (gilrs.gamepads().next(), config.gamepad_id) {
             (Some((conn_id, _)), None) => {
