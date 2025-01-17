@@ -51,6 +51,8 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         .filter_map(|(id, gp)| if gp.is_ff_supported() { Some(id) } else { None })
         .collect::<Vec<_>>();
 
+    dbg!(&support_ff);
+
     let duration = ff::Ticks::from_ms(1);
     let effect = ff::EffectBuilder::new()
         .add_effect(ff::BaseEffect {
