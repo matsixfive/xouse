@@ -142,7 +142,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     ..
                 } => {
                     let actions = config.actions[button].clone();
-                    dbg!(&actions, &button);
+                    // dbg!(&actions, &button);
 
                     let action_interface = crate::actions2::ActionInterface {
                         config: config_mx.clone(),
@@ -162,7 +162,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     ..
                 } => {
                     let actions = config.actions[button].clone();
-                    dbg!(&actions, &button);
+                    // dbg!(&actions, &button);
 
                     let action_interface = crate::actions2::ActionInterface {
                         config: config_mx.clone(),
