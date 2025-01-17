@@ -239,7 +239,9 @@ impl UpDownActionFn for UpDownAction {
                     .set("rust_func", f)
                     .expect("Failed to set global");
 
+                println!("Running Lua script: {}", script);
                 let _ = lua.load(script.as_str()).exec();
+                println!("Finished Lua script");
             }
         }
     }

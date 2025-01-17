@@ -75,24 +75,18 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         let _ = effect.play();
     }));
 
-    println!("Starting mouser");
 
     let mut l_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
     let mut r_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
 
     let mut remainder = Vec2::<f32> { x: 0.0, y: 0.0 };
 
-    println!("emitting speed_change");
     let config = config_mx.lock().unwrap();
-    println!("got config lock");
     // window.emit("speed_change", config.speed)?;
-    println!("emitted speed_change");
     std::mem::drop(config);
-    println!("dropped config");
 
 
     loop {
-        println!("setting lock");
         let mut config = config_mx.lock().unwrap();
         // match config.gamepad_id {
         //     Some(id) => {
@@ -113,8 +107,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         //     println!("Some");
         // }
         
-        println!("looping");
-
         match (gilrs.gamepads().next(), config.gamepad_id) {
             (Some((conn_id, _)), None) => {
                 config.gamepad_id = Some(conn_id);
