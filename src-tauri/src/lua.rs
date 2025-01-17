@@ -8,5 +8,7 @@ pub fn init_lua() -> anyhow::Result<mlua::Lua> {
 
     lua.globals().set("rust_func", f)?;
 
+    lua.globals().set("number", 1)?;
+
     Ok(lua)
 }

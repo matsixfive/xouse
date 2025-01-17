@@ -29,7 +29,7 @@ impl Default for ActionMap {
             (
                 Button::South,
                 vec![Action::UpDown(UpDownAction::LuaScript {
-                    script: String::from("print('Hello from Lua!')"),
+                    script: String::from("print(number)"),
                 })],
                 // vec![Action::UpDown(UpDownAction::Click(MouseButton::Left))],
             ),
