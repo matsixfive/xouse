@@ -1,4 +1,4 @@
-pub fn test_lua() -> anyhow::Result<()> {
+pub fn init_lua() -> anyhow::Result<mlua::Lua> {
     let lua = mlua::Lua::new();
 
     let f = lua.create_function(|_, ()| -> mlua::Result<i32> {
@@ -8,13 +8,5 @@ pub fn test_lua() -> anyhow::Result<()> {
 
     lua.globals().set("rust_func", f)?;
 
-    let _ = lua
-        .load(
-r#"
-local num = rust_func()
-print(num)
-"#,
-        )
-        .exec();
-    Ok(())
+    Ok(lua)
 }

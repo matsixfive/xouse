@@ -192,9 +192,10 @@ pub trait Rumbler {
     fn rumble(&self);
 }
 
-pub struct ActionInterface {
+pub struct ActionInterface<'lua> {
     pub config: Arc<Mutex<Config>>,
     pub window: WebviewWindow,
+    pub lua: &'lua mlua::Lua,
     pub rumble: Option<Box<dyn Rumbler>>,
 }
 
@@ -226,22 +227,8 @@ impl UpDownActionFn for UpDownAction {
             UpDownAction::SpeedDown => todo!(),
             UpDownAction::KeyPress { key, modifiers } => todo!(),
             UpDownAction::LuaScript { script } => {
-                let lua = mlua::Lua::new();
-
-                let f = lua
-                    .create_function(|_, ()| -> mlua::Result<i32> {
-                        println!("running 69");
-                        Ok(69)
-                    })
-                    .expect("Failed to create function");
-
-                lua.globals()
-                    .set("rust_func", f)
-                    .expect("Failed to set global");
-
-                println!("Running Lua script: {}", script);
+                let lua = state.lua;
                 let _ = lua.load(script.as_str()).exec();
-                println!("Finished Lua script");
             }
         }
     }
@@ -252,7 +239,7 @@ impl UpDownActionFn for UpDownAction {
             UpDownAction::SpeedUp => todo!(),
             UpDownAction::SpeedDown => todo!(),
             UpDownAction::KeyPress { key, modifiers } => todo!(),
-            UpDownAction::LuaScript { script } => {},
+            UpDownAction::LuaScript { script } => {}
         }
     }
 }

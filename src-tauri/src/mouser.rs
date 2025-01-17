@@ -75,7 +75,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         let _ = effect.play();
     }));
 
-
     let mut l_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
     let mut r_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
 
@@ -85,6 +84,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     // window.emit("speed_change", config.speed)?;
     std::mem::drop(config);
 
+    let lua_ctx = crate::lua::init_lua().unwrap();
 
     loop {
         let mut config = config_mx.lock().unwrap();
@@ -106,7 +106,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         // } else {
         //     println!("Some");
         // }
-        
+
         match (gilrs.gamepads().next(), config.gamepad_id) {
             (Some((conn_id, _)), None) => {
                 config.gamepad_id = Some(conn_id);
@@ -147,6 +147,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     let action_interface = crate::actions2::ActionInterface {
                         config: config_mx.clone(),
                         window: window.clone(),
+                        lua: &lua_ctx,
                         rumble: None,
                     };
                     for action in actions {
@@ -167,6 +168,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     let action_interface = crate::actions2::ActionInterface {
                         config: config_mx.clone(),
                         window: window.clone(),
+                        lua: &lua_ctx,
                         rumble: None,
                     };
                     for action in actions {

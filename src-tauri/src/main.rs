@@ -19,8 +19,6 @@ struct AppState {
 }
 
 fn main() {
-    lua::test_lua().unwrap();
-
     // use the default config
     // later will try to load the config from a file
     let config = Arc::new(Mutex::new(Config::default()));
