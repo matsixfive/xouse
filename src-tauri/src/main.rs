@@ -32,6 +32,7 @@ fn main() {
                 let mut config_mtx = config.lock().unwrap();
                 *config_mtx = new_config;
                 println!("Loaded config: {:?}", *config_mtx);
+                std::mem::drop(config_mtx);
             } else {
                 eprintln!("Could not load config");
             }
