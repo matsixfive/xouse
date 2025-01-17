@@ -7,7 +7,6 @@ use std::time::Duration;
 use tauri::Emitter;
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
-use crate::actions::ActionType;
 use crate::actions2::{Action, SimpleActionFn, UpDownActionFn};
 use crate::config::Config;
 
@@ -150,7 +149,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     ..
                 } => {
                     let actions = config.actions[button].clone();
-                    std::mem::drop(config);
                     dbg!(&actions, &button);
 
                     let action_interface = crate::actions2::ActionInterface {
@@ -164,7 +162,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                             Action::UpDown(action) => action.down(&action_interface),
                         }
                     }
-                    config = config_mx.lock().unwrap();
                 }
 
                 Event {
@@ -172,7 +169,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     ..
                 } => {
                     let actions = config.actions[button].clone();
-                    std::mem::drop(config);
                     dbg!(&actions, &button);
 
                     let action_interface = crate::actions2::ActionInterface {
@@ -186,7 +182,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                             _ => (),
                         }
                     }
-                    config = config_mx.lock().unwrap();
                 }
                 Event {
                     event: EventType::AxisChanged(axis, value, ..),

@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod actions;
+// mod actions;
 mod actions2;
 mod config;
 mod lua;
@@ -14,7 +14,9 @@ use std::{
 };
 use tauri::{menu, Listener, Manager};
 
-struct AppState(Arc<Mutex<Config>>);
+struct AppState {
+    config: Arc<Mutex<Config>>,
+}
 
 fn main() {
     lua::test_lua().unwrap();
@@ -23,16 +25,19 @@ fn main() {
     // later will try to load the config from a file
     let config = Arc::new(Mutex::new(Config::default()));
 
+    dbg!(line!());
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![get_speed, set_speed, get_config,])
-        .manage(AppState(Arc::clone(&config)))
+        .manage(AppState {
+            config: Arc::clone(&config),
+        })
         .setup(move |app| {
             // load the config instead of using the default
             if let Ok(new_config) = Config::load(app.app_handle()) {
                 let mut config_mtx = config.lock().unwrap();
                 *config_mtx = new_config;
                 println!("Loaded config: {:?}", *config_mtx);
-                std::mem::drop(config_mtx);
             } else {
                 eprintln!("Could not load config");
             }
@@ -65,7 +70,8 @@ fn main() {
                 .items(&[&quit])
                 .build()?;
 
-            let tray_icon_image = tauri::image::Image::new(include_bytes!("../icons/128x128.png"), 128, 128);
+            let tray_icon_image =
+                tauri::image::Image::new(include_bytes!("../icons/128x128.png"), 128, 128);
 
             let _tray = tauri::tray::TrayIconBuilder::new()
                 .menu(&tray_menu)
@@ -121,18 +127,18 @@ fn main() {
 
 #[tauri::command]
 fn get_speed(state: tauri::State<AppState>) -> Result<f32, String> {
-    let config = state.0.lock().unwrap();
+    let config = state.config.lock().unwrap();
     Ok(config.speed)
 }
 
 #[tauri::command]
 fn set_speed(state: tauri::State<AppState>, speed: f32) {
-    let mut config = state.0.lock().unwrap();
+    let mut config = state.config.lock().unwrap();
     config.speed = speed;
 }
 
 #[tauri::command]
 fn get_config(state: tauri::State<AppState>) -> Result<Config, String> {
-    let config = state.0.lock().unwrap();
+    let config = state.config.lock().unwrap();
     Ok(config.clone())
 }
