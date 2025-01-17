@@ -39,10 +39,12 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     let mut gilrs = Gilrs::new().unwrap();
 
     // print all connected gamepads
+    println!("Connected gamepads:");
     for (id, gp) in gilrs.gamepads() {
         println!("Connected gamepad id: {}", id);
         println!("Gamepad: {}", gp.name());
     }
+    println!("End of connected gamepads");
 
     let support_ff = gilrs
         .gamepads()
