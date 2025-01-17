@@ -86,6 +86,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     std::mem::drop(config);
 
     loop {
+        println!("setting lock");
         let mut config = config_mx.lock().unwrap();
         // match config.gamepad_id {
         //     Some(id) => {
