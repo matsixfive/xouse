@@ -85,7 +85,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     println!("emitting speed_change");
     let config = config_mx.lock().unwrap();
     println!("got config lock");
-    window.emit("speed_change", config.speed)?;
+    // window.emit("speed_change", config.speed)?;
     println!("emitted speed_change");
     std::mem::drop(config);
     println!("dropped config");
