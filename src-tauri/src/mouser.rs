@@ -83,13 +83,13 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     let mut remainder = Vec2::<f32> { x: 0.0, y: 0.0 };
 
     println!("emitting speed_change");
-    dbg!(&config_mx);
     let config = config_mx.lock().unwrap();
     println!("got config lock");
     window.emit("speed_change", config.speed)?;
-    std::mem::drop(config);
-
     println!("emitted speed_change");
+    std::mem::drop(config);
+    println!("dropped config");
+
 
     loop {
         println!("setting lock");
