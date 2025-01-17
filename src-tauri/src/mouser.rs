@@ -76,6 +76,8 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         let _ = effect.play();
     }));
 
+    println!("Starting mouser");
+
     let mut l_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
     let mut r_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
 
