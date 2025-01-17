@@ -12,19 +12,15 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
-use tauri::{menu, Emitter, Listener, Manager};
+use tauri::{menu, Listener, Manager};
 
 struct AppState(Arc<Mutex<Config>>);
 
 fn main() {
     lua::test_lua().unwrap();
-    // let loaded_config = Config::load().unwrap_or_else(|e| {
-    //     let config = Config::default();
-    //     eprintln!("Could not load config: {}", e);
-    //     config
-    // });
-    // println!("Using config: {:#?}", loaded_config);
-    // let config = Arc::new(Mutex::new(loaded_config));
+
+    // use the default config
+    // later will try to load the config from a file
     let config = Arc::new(Mutex::new(Config::default()));
 
     tauri::Builder::default()
@@ -35,28 +31,28 @@ fn main() {
             if let Ok(new_config) = Config::load(app.app_handle()) {
                 let mut config_mtx = config.lock().unwrap();
                 *config_mtx = new_config;
+                println!("Loaded config: {:?}", *config_mtx);
             } else {
                 eprintln!("Could not load config");
             }
 
-            let window = app.get_webview_window("main").unwrap();
-
-            let speed_config_listener = Arc::clone(&config);
+            let speed_event_config = Arc::clone(&config);
             let _speed_event = app.listen_any("speed_change", move |msg| {
                 let speed: f32 = msg.payload().parse().unwrap();
-                let mut config = speed_config_listener.lock().unwrap();
+                let mut config = speed_event_config.lock().unwrap();
                 config.speed = speed;
             });
 
-            let save_listener_config = Arc::clone(&config);
+            let save_event_config = Arc::clone(&config);
             let _save_event = app.listen_any("save_config", move |_| {
-                let config = save_listener_config.lock().unwrap();
+                let config = save_event_config.lock().unwrap();
                 config.save().unwrap();
             });
 
+            let webview_window = app.get_webview_window("main").unwrap();
             let thread_config = Arc::clone(&config);
             thread::spawn(move || {
-                mouser::start(window, thread_config).unwrap();
+                mouser::start(webview_window, thread_config).unwrap();
             });
 
             let hide = menu::CheckMenuItemBuilder::with_id("hide", "Hide").build(app)?;
@@ -68,11 +64,11 @@ fn main() {
                 .items(&[&quit])
                 .build()?;
 
-            let icon = tauri::image::Image::new(include_bytes!("../icons/128x128.png"), 128, 128);
+            let tray_icon_image = tauri::image::Image::new(include_bytes!("../icons/128x128.png"), 128, 128);
 
             let _tray = tauri::tray::TrayIconBuilder::new()
                 .menu(&tray_menu)
-                .icon(icon)
+                .icon(tray_icon_image)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     "hide" => {
                         if let Some(webview_window) = app.get_webview_window("main") {

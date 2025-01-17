@@ -28,7 +28,10 @@ impl Default for ActionMap {
         let map = HashMap::from([
             (
                 Button::South,
-                vec![Action::UpDown(UpDownAction::Click(MouseButton::Left))],
+                vec![Action::UpDown(UpDownAction::LuaScript {
+                    script: String::from("print('Hello from Lua!')"),
+                })],
+                // vec![Action::UpDown(UpDownAction::Click(MouseButton::Left))],
             ),
             (
                 Button::East,
