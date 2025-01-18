@@ -1,6 +1,7 @@
 use anyhow::Result;
 use gilrs::ff;
 use gilrs::{ev::Axis, Event, EventType, Gilrs};
+use std::mem::drop;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -72,7 +73,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     crate::lock!();
     let config = config_mx.lock().unwrap();
     // window.emit("speed_change", config.speed)?;
-    std::mem::drop(config);
+    drop(config);
 
     let lua_ctx = crate::lua::init_lua().unwrap();
 
@@ -124,6 +125,8 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                         lua: &lua_ctx,
                         rumble: None,
                     };
+
+                    drop(config);
                     for action in actions {
                         if let Err(e) = match action {
                             Action::Simple(action) => action.call(&action_interface),
@@ -132,6 +135,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                             eprintln!("Error: {:?}", e);
                         }
                     }
+                    config = config_mx.lock().unwrap();
                 }
 
                 Event {
@@ -147,6 +151,8 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                         lua: &lua_ctx,
                         rumble: None,
                     };
+
+                    drop(config);
                     for action in actions {
                         if let Err(e) = match action {
                             Action::UpDown(action) => action.up(&action_interface),
@@ -155,6 +161,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                             eprintln!("Error: {:?}", e);
                         }
                     }
+                    config = config_mx.lock().unwrap();
                 }
                 Event {
                     event: EventType::AxisChanged(axis, value, ..),
@@ -214,7 +221,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
             );
         }
 
-        std::mem::drop(config);
+        drop(config);
         thread::sleep(Duration::from_millis(POLL_TIME_MS));
     }
 }
