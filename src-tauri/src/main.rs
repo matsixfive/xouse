@@ -18,6 +18,13 @@ struct AppState {
     config: Arc<Mutex<Config>>,
 }
 
+#[macro_export]
+macro_rules! lock {
+    () => {
+        println!("locking mutex at: {}:{}:{}", file!(), line!(), column!());
+    };
+}
+
 fn main() {
     // use the default config
     // later will try to load the config from a file
@@ -33,6 +40,7 @@ fn main() {
         .setup(move |app| {
             // load the config instead of using the default
             if let Ok(new_config) = Config::load(app.app_handle()) {
+                crate::lock!();
                 let mut config_mtx = config.lock().unwrap();
                 *config_mtx = new_config;
                 println!("Loaded config: {:?}", *config_mtx);
@@ -43,12 +51,14 @@ fn main() {
             let speed_event_config = Arc::clone(&config);
             let _speed_event = app.listen_any("speed_change", move |msg| {
                 let speed: f32 = msg.payload().parse().unwrap();
+                crate::lock!();
                 let mut config = speed_event_config.lock().unwrap();
                 config.speed = speed;
             });
 
             let save_event_config = Arc::clone(&config);
             let _save_event = app.listen_any("save_config", move |_| {
+                crate::lock!();
                 let config = save_event_config.lock().unwrap();
                 config.save().unwrap();
             });
@@ -125,18 +135,21 @@ fn main() {
 
 #[tauri::command]
 fn get_speed(state: tauri::State<AppState>) -> Result<f32, String> {
+    crate::lock!();
     let config = state.config.lock().unwrap();
     Ok(config.speed)
 }
 
 #[tauri::command]
 fn set_speed(state: tauri::State<AppState>, speed: f32) {
+    crate::lock!();
     let mut config = state.config.lock().unwrap();
     config.speed = speed;
 }
 
 #[tauri::command]
 fn get_config(state: tauri::State<AppState>) -> Result<Config, String> {
+    crate::lock!();
     let config = state.config.lock().unwrap();
     Ok(config.clone())
 }

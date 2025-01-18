@@ -69,6 +69,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
 
     let mut remainder = Vec2::<f32> { x: 0.0, y: 0.0 };
 
+    crate::lock!();
     let config = config_mx.lock().unwrap();
     // window.emit("speed_change", config.speed)?;
     std::mem::drop(config);
@@ -76,6 +77,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     let lua_ctx = crate::lua::init_lua().unwrap();
 
     loop {
+        crate::lock!();
         let mut config = config_mx.lock().unwrap();
 
         match (gilrs.gamepads().next(), config.gamepad_id) {
