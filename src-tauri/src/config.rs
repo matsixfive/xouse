@@ -77,7 +77,10 @@ impl Config {
     pub fn save(&self) -> Result<()> {
         println!("Saving config");
 
-        let config_dir = &self.config_dir.as_ref().ok_or(anyhow!("Config directory not set"))?;
+        let config_dir = &self
+            .config_dir
+            .as_ref()
+            .ok_or(anyhow!("Config directory not set"))?;
         println!("Config path: {:?}", &self.config_dir);
         std::fs::create_dir_all(&config_dir)?;
         let mut config_file = std::fs::File::create(Self::with_config_file(config_dir))?;

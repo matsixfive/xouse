@@ -207,12 +207,10 @@ impl SimpleActionFn for SimpleAction {
     fn call(&self, interface: &ActionInterface) -> Result<(), ActionError> {
         match self {
             SimpleAction::SpeedInc => {
-                crate::lock!();
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed += config.speed_step;
             }
             SimpleAction::SpeedDec => {
-                crate::lock!();
                 let config = &mut *interface.config.lock().unwrap();
                 if config.speed > config.speed_step {
                     config.speed -= config.speed_step;
@@ -286,12 +284,10 @@ impl UpDownActionFn for UpDownAction {
                 }
             },
             UpDownAction::SpeedUp => {
-                crate::lock!();
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
             UpDownAction::SpeedDown => {
-                crate::lock!();
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
             }
@@ -334,12 +330,10 @@ impl UpDownActionFn for UpDownAction {
                 }
             },
             UpDownAction::SpeedUp => {
-                crate::lock!();
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
             }
             UpDownAction::SpeedDown => {
-                crate::lock!();
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
