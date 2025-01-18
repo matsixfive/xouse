@@ -1,109 +1,104 @@
 use crate::config::Config;
 use gilrs::Button;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
 use tauri::{Emitter, WebviewWindow};
-
+use thiserror::Error;
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
-pub type ActionFn = Box<
-    dyn Fn(Arc<Mutex<Config>>, &WebviewWindow, Option<Arc<Box<dyn Fn() + Send + Sync>>>)
-        + Send
-        + Sync,
->;
-
-#[derive(Clone)]
-pub enum ActionType {
-    Simple(Arc<ActionFn>),                  // Triggered on button press
-    UpDown((Arc<ActionFn>, Arc<ActionFn>)), // Triggered on button press and release
+#[derive(Clone, Debug)]
+pub struct ActionMap {
+    map: HashMap<Button, Vec<Action>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ActionMap(pub HashMap<Button, Vec<Action>>);
+static EMPTY_ACTIONS: Vec<Action> = vec![];
+impl std::ops::Index<Button> for ActionMap {
+    type Output = Vec<Action>;
+
+    fn index(&self, button: Button) -> &Self::Output {
+        self.map.get(&button).unwrap_or(&EMPTY_ACTIONS)
+    }
+}
 
 impl Default for ActionMap {
     fn default() -> Self {
         let map = HashMap::from([
-            (Button::South, vec![Action::Click(MouseButton::Left)]),
-            (Button::East, vec![Action::Click(MouseButton::Right)]),
+            (
+                Button::South,
+                vec![Action::UpDown(UpDownAction::LuaScript {
+                    script: String::from("print(number)\nnumber = number + 1"),
+                })],
+                // vec![Action::UpDown(UpDownAction::Click(MouseButton::Left))],
+            ),
+            (
+                Button::East,
+                vec![Action::UpDown(UpDownAction::Click(MouseButton::Right))],
+            ),
             (
                 Button::North,
-                vec![Action::KeyPress(rdev::Key::Space, vec![])],
+                vec![Action::UpDown(UpDownAction::KeyPress {
+                    key: rdev::Key::Space,
+                    modifiers: vec![],
+                })],
             ),
-            (Button::DPadUp, vec![Action::SpeedInc, Action::Rumble]),
-            (Button::DPadDown, vec![Action::SpeedDec, Action::Rumble]),
+            (
+                Button::DPadUp,
+                vec![
+                    Action::Simple(SimpleAction::SpeedInc),
+                    Action::Simple(SimpleAction::Rumble),
+                ],
+            ),
+            (
+                Button::DPadDown,
+                vec![
+                    Action::Simple(SimpleAction::SpeedDec),
+                    Action::Simple(SimpleAction::Rumble),
+                ],
+            ),
             (
                 Button::RightTrigger,
                 vec![
-                    Action::KeyPress(rdev::Key::Tab, vec![ModifierKey::Ctrl]),
-                    Action::Rumble,
+                    Action::UpDown(UpDownAction::KeyPress {
+                        key: rdev::Key::Tab,
+                        modifiers: vec![ModifierKey::Ctrl],
+                    }),
+                    Action::Simple(SimpleAction::Rumble),
                 ],
             ),
             (
                 Button::LeftTrigger,
                 vec![
-                    Action::KeyPress(rdev::Key::Tab, vec![ModifierKey::Ctrl, ModifierKey::Shift]),
-                    Action::Rumble,
+                    Action::UpDown(UpDownAction::KeyPress {
+                        key: rdev::Key::Tab,
+                        modifiers: vec![ModifierKey::Ctrl, ModifierKey::Shift],
+                    }),
+                    Action::Simple(SimpleAction::Rumble),
                 ],
             ),
-            (Button::RightTrigger2, vec![Action::SpeedUp]),
-            (Button::LeftTrigger2, vec![Action::SpeedDown]),
-            (Button::Select, vec![Action::ToggleVis]),
+            (
+                Button::RightTrigger2,
+                vec![Action::UpDown(UpDownAction::SpeedUp)],
+            ),
+            (
+                Button::LeftTrigger2,
+                vec![Action::UpDown(UpDownAction::SpeedDown)],
+            ),
+            (
+                Button::Select,
+                vec![Action::Simple(SimpleAction::ToggleVis)],
+            ),
         ]);
-        Self(map)
-    }
-}
-
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub enum MouseButton {
-    Left,
-    Right,
-    Middle,
-}
-
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub enum Action {
-    Click(MouseButton),
-    SpeedUp,
-    SpeedDown,
-    SpeedInc,
-    SpeedDec,
-    KeyPress(rdev::Key, Vec<ModifierKey>),
-    Rumble,
-    ToggleVis,
-}
-
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
-pub enum ModifierKey {
-    Alt,
-    Ctrl,
-    Win,
-    Shift,
-}
-
-impl Into<rdev::Key> for ModifierKey {
-    fn into(self) -> rdev::Key {
-        <&ModifierKey>::into(&self)
-    }
-}
-
-impl Into<rdev::Key> for &ModifierKey {
-    fn into(self) -> rdev::Key {
-        match self {
-            ModifierKey::Alt => rdev::Key::Alt,
-            ModifierKey::Ctrl => rdev::Key::ControlLeft,
-            ModifierKey::Win => rdev::Key::MetaLeft,
-            ModifierKey::Shift => rdev::Key::ShiftLeft,
-        }
+        Self { map }
     }
 }
 
 impl serde::Serialize for ActionMap {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = HashMap::new();
-        for (button, action) in &self.0 {
+        for (button, action) in &self.map {
             map.insert(serialize_button(button), action);
         }
         map.serialize(serializer)
@@ -117,7 +112,7 @@ impl<'d> serde::Deserialize<'d> for ActionMap {
         for (button, action) in map {
             action_map.insert(deserialize_button(button), action);
         }
-        Ok(Self(action_map))
+        Ok(Self { map: action_map })
     }
 }
 
@@ -165,113 +160,226 @@ pub fn deserialize_button(button: String) -> Button {
     }
 }
 
-impl From<Action> for ActionType {
-    fn from(val: Action) -> Self {
-        match val {
-            Action::Click(button) => match button {
-                MouseButton::Left => ActionType::UpDown((
-                    Arc::new(Box::new(|_, _, _| unsafe {
-                        println!("click");
-                        kbm::mouse_event(kbm::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                    })),
-                    Arc::new(Box::new(|_, _, _| unsafe {
-                        println!("click up");
-                        kbm::mouse_event(kbm::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                    })),
-                )),
-                MouseButton::Right => ActionType::UpDown((
-                    Arc::new(Box::new(|_, _, _| unsafe {
-                        println!("rclick");
-                        kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-                    })),
-                    Arc::new(Box::new(|_, _, _| unsafe {
-                        println!("rclick up");
-                        kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-                    })),
-                )),
-                MouseButton::Middle => ActionType::UpDown((
-                    Arc::new(Box::new(|_, _, _| unsafe {
-                        println!("mclick");
-                        kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
-                    })),
-                    Arc::new(Box::new(|_, _, _| unsafe {
-                        println!("mclick up");
-                        kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
-                    })),
-                )),
-            },
-            Action::SpeedUp => ActionType::UpDown((
-                Arc::new(Box::new(|config, _, _| {
-                    let config = &mut *config.lock().unwrap();
-                    config.speed_mult *= config.speed_up;
-                })),
-                Arc::new(Box::new(|config, _, _| {
-                    let config = &mut *config.lock().unwrap();
-                    config.speed_mult /= config.speed_up;
-                })),
-            )),
-            Action::SpeedDown => ActionType::UpDown((
-                Arc::new(Box::new(|config, _, _| {
-                    let config = &mut *config.lock().unwrap();
-                    config.speed_mult /= config.speed_down;
-                })),
-                Arc::new(Box::new(|config, _, _| {
-                    let config = &mut *config.lock().unwrap();
-                    config.speed_mult *= config.speed_down;
-                })),
-            )),
-            Action::SpeedInc => ActionType::Simple(Arc::new(Box::new(|config, window, _| {
-                let config = &mut *config.lock().unwrap();
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Action {
+    Simple(SimpleAction), // Triggered on button press
+    UpDown(UpDownAction), // Triggered on button press and release
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub enum SimpleAction {
+    SpeedInc,
+    SpeedDec,
+    Rumble,
+    ToggleVis,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub enum UpDownAction {
+    Click(MouseButton),
+    SpeedUp,
+    SpeedDown,
+    KeyPress {
+        key: rdev::Key,
+        modifiers: Vec<ModifierKey>,
+    },
+    LuaScript {
+        script: String,
+    },
+}
+
+pub trait Rumbler {
+    fn rumble(&self) -> Result<(), gilrs::Error>;
+}
+
+pub struct ActionInterface<'lua> {
+    pub config: Arc<Mutex<Config>>,
+    pub window: WebviewWindow,
+    pub lua: &'lua mlua::Lua,
+    pub rumble: Option<Box<dyn Rumbler>>,
+}
+
+pub trait SimpleActionFn {
+    fn call(&self, state: &ActionInterface) -> Result<(), ActionError>;
+}
+
+impl SimpleActionFn for SimpleAction {
+    fn call(&self, interface: &ActionInterface) -> Result<(), ActionError> {
+        match self {
+            SimpleAction::SpeedInc => {
+                let config = &mut *interface.config.lock().unwrap();
                 config.speed += config.speed_step;
-                window.emit("speed_change", config.speed).unwrap();
-            }))),
-            Action::SpeedDec => ActionType::Simple(Arc::new(Box::new(|config, window, _| {
-                let config = &mut *config.lock().unwrap();
+            }
+            SimpleAction::SpeedDec => {
+                let config = &mut *interface.config.lock().unwrap();
                 if config.speed > config.speed_step {
                     config.speed -= config.speed_step;
-                    window.emit("speed_change", config.speed).unwrap();
                 }
-            }))),
-            Action::KeyPress(key, modifiers) => {
-                let modifiers2 = modifiers.clone();
-                ActionType::UpDown((
-                    Arc::new(Box::new(move |_, _, _| {
-                        println!("pressing {:?} with modifiers {:?}", key, modifiers);
-
-                        for modifier in &modifiers {
-                            let _ = rdev::simulate(&rdev::EventType::KeyPress(modifier.into()));
-                        }
-
-                        let _ = rdev::simulate(&rdev::EventType::KeyPress(key));
-                    })),
-                    Arc::new(Box::new(move |_, _, _| {
-                        println!("releasing {:?} with modifiers {:?}", key, modifiers2);
-
-                        let _ = rdev::simulate(&rdev::EventType::KeyRelease(key));
-
-                        for modifier in modifiers2.iter().rev() {
-                            let _ = rdev::simulate(&rdev::EventType::KeyRelease(modifier.into()));
-                        }
-                    })),
-                ))
             }
-            Action::Rumble => ActionType::Simple(Arc::new(Box::new(|_, _, rumble| {
-                if let Some(rumble) = rumble {
-                    rumble();
+            SimpleAction::Rumble => {
+                if let Some(rumbler) = &interface.rumble {
+                    rumbler.rumble()?;
+                } else {
+                    return Err(ActionError::Other("no rumbler".to_string()));
                 }
-            }))),
-            Action::ToggleVis => {
-                ActionType::Simple(Arc::new(Box::new(|_, window, _| toggle_window(window))))
             }
+            SimpleAction::ToggleVis => {
+                let webview_window = &interface.window;
+                if let Ok(true) = webview_window.is_visible() {
+                    webview_window.hide()?;
+                } else {
+                    webview_window.show()?;
+                    webview_window.set_focus()?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum ActionError {
+    #[error("Lua error: {0}")]
+    Lua(#[from] mlua::Error),
+
+    #[error("Keypress error: {0}")]
+    Keypress(#[from] rdev::SimulateError),
+
+    #[error("Rumble error: {0}")]
+    Rumble(#[from] gilrs::Error),
+
+    #[error("Tauri error: {0}")]
+    Tauri(#[from] tauri::Error),
+
+    #[error("Other error: {0}")]
+    Other(String),
+}
+
+pub trait UpDownActionFn {
+    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError>;
+    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError>;
+}
+
+impl UpDownActionFn for UpDownAction {
+    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError> {
+        match self {
+            UpDownAction::Click(button) => match button {
+                MouseButton::Left => {
+                    println!("left click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Right => {
+                    println!("right click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Middle => {
+                    println!("middle click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
+                    }
+                }
+            },
+            UpDownAction::SpeedUp => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult *= config.speed_up;
+            }
+            UpDownAction::SpeedDown => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult /= config.speed_up;
+            }
+            UpDownAction::KeyPress { key, modifiers } => {
+                println!("pressing {:?} with modifiers {:?}", key, modifiers);
+
+                for modifier in modifiers {
+                    rdev::simulate(&rdev::EventType::KeyPress(modifier.into()))?;
+                }
+
+                rdev::simulate(&rdev::EventType::KeyPress(*key))?;
+            }
+            UpDownAction::LuaScript { script } => {
+                interface.lua.load(script.as_str()).exec()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError> {
+        match self {
+            UpDownAction::Click(button) => match button {
+                MouseButton::Left => {
+                    println!("left click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Right => {
+                    println!("right click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Middle => {
+                    println!("middle click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
+                    }
+                }
+            },
+            UpDownAction::SpeedUp => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult /= config.speed_up;
+            }
+            UpDownAction::SpeedDown => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult *= config.speed_up;
+            }
+            UpDownAction::KeyPress { key, modifiers } => {
+                println!("releasing {:?} with modifiers {:?}", key, modifiers);
+
+                rdev::simulate(&rdev::EventType::KeyRelease(*key))?;
+
+                for modifier in modifiers.iter().rev() {
+                    rdev::simulate(&rdev::EventType::KeyRelease(modifier.into()))?;
+                }
+            }
+            UpDownAction::LuaScript { script } => {}
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub enum ModifierKey {
+    Alt,
+    Ctrl,
+    Win,
+    Shift,
+}
+
+impl Into<rdev::Key> for ModifierKey {
+    fn into(self) -> rdev::Key {
+        <&ModifierKey>::into(&self)
+    }
+}
+
+impl Into<rdev::Key> for &ModifierKey {
+    fn into(self) -> rdev::Key {
+        match self {
+            ModifierKey::Alt => rdev::Key::Alt,
+            ModifierKey::Ctrl => rdev::Key::ControlLeft,
+            ModifierKey::Win => rdev::Key::MetaLeft,
+            ModifierKey::Shift => rdev::Key::ShiftLeft,
         }
     }
 }
 
-pub fn toggle_window(webview_window: &WebviewWindow) {
-    if let Ok(true) = webview_window.is_visible() {
-        let _ = webview_window.hide();
-    } else {
-        let _ = webview_window.show();
-        let _ = webview_window.set_focus();
-    }
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub enum MouseButton {
+    Left,
+    Right,
+    Middle,
 }

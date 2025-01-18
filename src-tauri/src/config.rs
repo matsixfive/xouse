@@ -1,4 +1,4 @@
-use crate::actions2::ActionMap;
+use crate::actions::ActionMap;
 use anyhow::{anyhow, Result};
 use std::{io::Write, path::PathBuf};
 use tauri::{AppHandle, Manager};

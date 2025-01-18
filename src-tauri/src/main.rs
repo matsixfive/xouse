@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 // mod actions;
-mod actions2;
+mod actions;
 mod config;
 mod lua;
 mod mouser;

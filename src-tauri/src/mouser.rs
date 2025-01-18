@@ -7,7 +7,7 @@ use std::time::Duration;
 use tauri::Emitter;
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
-use crate::actions2::{Action, SimpleActionFn, UpDownActionFn};
+use crate::actions::{Action, SimpleActionFn, UpDownActionFn};
 use crate::config::Config;
 
 fn ease(x: f32) -> f32 {
@@ -116,7 +116,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     let actions = config.actions[button].clone();
                     // dbg!(&actions, &button);
 
-                    let action_interface = crate::actions2::ActionInterface {
+                    let action_interface = crate::actions::ActionInterface {
                         config: config_mx.clone(),
                         window: window.clone(),
                         lua: &lua_ctx,
@@ -139,7 +139,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     let actions = config.actions[button].clone();
                     // dbg!(&actions, &button);
 
-                    let action_interface = crate::actions2::ActionInterface {
+                    let action_interface = crate::actions::ActionInterface {
                         config: config_mx.clone(),
                         window: window.clone(),
                         lua: &lua_ctx,
