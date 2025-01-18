@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::config::Config;
 use gilrs::Button;
 use serde::{Deserialize, Serialize};
@@ -8,6 +6,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::{Emitter, WebviewWindow};
+use thiserror::Error;
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
 #[derive(Clone, Debug)]
@@ -201,27 +200,48 @@ pub struct ActionInterface<'lua> {
 }
 
 pub trait SimpleActionFn {
-    fn call(&self, state: &ActionInterface);
+    fn call(&self, state: &ActionInterface) -> Result<(), ActionError>;
 }
 
 impl SimpleActionFn for SimpleAction {
-    fn call(&self, state: &ActionInterface) {
+    fn call(&self, interface: &ActionInterface) -> Result<(), ActionError> {
         match self {
-            SimpleAction::SpeedInc => println!("{:?} not yet implemented", self),
-            SimpleAction::SpeedDec => println!("{:?} not yet implemented", self),
-            SimpleAction::Rumble => println!("{:?} not yet implemented", self),
-            SimpleAction::ToggleVis => println!("{:?} not yet implemented", self),
+            SimpleAction::SpeedInc => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed += config.speed_step;
+            }
+            SimpleAction::SpeedDec => {
+                let config = &mut *interface.config.lock().unwrap();
+                if config.speed > config.speed_step {
+                    config.speed -= config.speed_step;
+                }
+            }
+            SimpleAction::Rumble => return Err(ActionError::Other("rumble not implemented".to_string())),
+            SimpleAction::ToggleVis => return Err(ActionError::Other("toggle vis not implemented".to_string())),
         }
+        Ok(())
     }
 }
 
+#[derive(Error, Debug)]
+pub enum ActionError {
+    #[error("Lua error: {0}")]
+    Lua(#[from] mlua::Error),
+
+    #[error("Keypress error: {0}")]
+    Keypress(#[from] rdev::SimulateError),
+
+    #[error("Other error: {0}")]
+    Other(String),
+}
+
 pub trait UpDownActionFn {
-    fn down(&self, interface: &ActionInterface);
-    fn up(&self, interface: &ActionInterface);
+    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError>;
+    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError>;
 }
 
 impl UpDownActionFn for UpDownAction {
-    fn down(&self, interface: &ActionInterface) {
+    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError> {
         match self {
             UpDownAction::Click(button) => match button {
                 MouseButton::Left => {
@@ -247,15 +267,27 @@ impl UpDownActionFn for UpDownAction {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
-            UpDownAction::SpeedDown => println!("{:?} not yet implemented", self),
-            UpDownAction::KeyPress { key, modifiers } => println!("{:?} not yet implemented", self),
+            UpDownAction::SpeedDown => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult /= config.speed_up;
+            }
+            UpDownAction::KeyPress { key, modifiers } => {
+                println!("pressing {:?} with modifiers {:?}", key, modifiers);
+
+                for modifier in modifiers {
+                    rdev::simulate(&rdev::EventType::KeyPress(modifier.into()))?;
+                }
+
+                rdev::simulate(&rdev::EventType::KeyPress(*key))?;
+            }
             UpDownAction::LuaScript { script } => {
-                let _ = interface.lua.load(script.as_str()).exec();
+                interface.lua.load(script.as_str()).exec()?;
             }
         }
+        Ok(())
     }
 
-    fn up(&self, interface: &ActionInterface) {
+    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError> {
         match self {
             UpDownAction::Click(button) => match button {
                 MouseButton::Left => {
@@ -281,10 +313,14 @@ impl UpDownActionFn for UpDownAction {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
             }
-            UpDownAction::SpeedDown => println!("{:?} not yet implemented", self),
-            UpDownAction::KeyPress { key, modifiers } => println!("{:?} not yet implemented", self),
+            UpDownAction::SpeedDown => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult *= config.speed_up;
+            }
+            UpDownAction::KeyPress { key, modifiers } => return Err(ActionError::Other("key release not yet implemented".to_string())),
             UpDownAction::LuaScript { script } => {}
         }
+        Ok(())
     }
 }
 
@@ -294,6 +330,23 @@ pub enum ModifierKey {
     Ctrl,
     Win,
     Shift,
+}
+
+impl Into<rdev::Key> for ModifierKey {
+    fn into(self) -> rdev::Key {
+        <&ModifierKey>::into(&self)
+    }
+}
+
+impl Into<rdev::Key> for &ModifierKey {
+    fn into(self) -> rdev::Key {
+        match self {
+            ModifierKey::Alt => rdev::Key::Alt,
+            ModifierKey::Ctrl => rdev::Key::ControlLeft,
+            ModifierKey::Win => rdev::Key::MetaLeft,
+            ModifierKey::Shift => rdev::Key::ShiftLeft,
+        }
+    }
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

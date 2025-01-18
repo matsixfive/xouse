@@ -123,9 +123,11 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                         rumble: None,
                     };
                     for action in actions {
-                        match action {
+                        if let Err(e) = match action {
                             Action::Simple(action) => action.call(&action_interface),
                             Action::UpDown(action) => action.down(&action_interface),
+                        } {
+                            eprintln!("Error: {:?}", e);
                         }
                     }
                 }
@@ -144,9 +146,11 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                         rumble: None,
                     };
                     for action in actions {
-                        match action {
+                        if let Err(e) = match action {
                             Action::UpDown(action) => action.up(&action_interface),
-                            _ => (),
+                            _ => Ok(()),
+                        } {
+                            eprintln!("Error: {:?}", e);
                         }
                     }
                 }
