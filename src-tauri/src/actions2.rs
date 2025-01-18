@@ -189,7 +189,7 @@ pub enum UpDownAction {
 }
 
 pub trait Rumbler {
-    fn rumble(&self);
+    fn rumble(&self) -> Result<(), gilrs::Error>;
 }
 
 pub struct ActionInterface<'lua> {
@@ -216,8 +216,22 @@ impl SimpleActionFn for SimpleAction {
                     config.speed -= config.speed_step;
                 }
             }
-            SimpleAction::Rumble => return Err(ActionError::Other("rumble not implemented".to_string())),
-            SimpleAction::ToggleVis => return Err(ActionError::Other("toggle vis not implemented".to_string())),
+            SimpleAction::Rumble => {
+                if let Some(rumbler) = &interface.rumble {
+                    rumbler.rumble()?;
+                } else {
+                    return Err(ActionError::Other("no rumbler".to_string()));
+                }
+            }
+            SimpleAction::ToggleVis => {
+                let webview_window = &interface.window;
+                if let Ok(true) = webview_window.is_visible() {
+                    webview_window.hide()?;
+                } else {
+                    webview_window.show()?;
+                    webview_window.set_focus()?;
+                }
+            }
         }
         Ok(())
     }
@@ -230,6 +244,12 @@ pub enum ActionError {
 
     #[error("Keypress error: {0}")]
     Keypress(#[from] rdev::SimulateError),
+
+    #[error("Rumble error: {0}")]
+    Rumble(#[from] gilrs::Error),
+
+    #[error("Tauri error: {0}")]
+    Tauri(#[from] tauri::Error),
 
     #[error("Other error: {0}")]
     Other(String),
@@ -317,7 +337,15 @@ impl UpDownActionFn for UpDownAction {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
-            UpDownAction::KeyPress { key, modifiers } => return Err(ActionError::Other("key release not yet implemented".to_string())),
+            UpDownAction::KeyPress { key, modifiers } => {
+                println!("releasing {:?} with modifiers {:?}", key, modifiers);
+
+                rdev::simulate(&rdev::EventType::KeyRelease(*key))?;
+
+                for modifier in modifiers.iter().rev() {
+                    rdev::simulate(&rdev::EventType::KeyRelease(modifier.into()))?;
+                }
+            }
             UpDownAction::LuaScript { script } => {}
         }
         Ok(())
