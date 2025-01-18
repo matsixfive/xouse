@@ -207,10 +207,10 @@ pub trait SimpleActionFn {
 impl SimpleActionFn for SimpleAction {
     fn call(&self, state: &ActionInterface) {
         match self {
-            SimpleAction::SpeedInc => todo!(),
-            SimpleAction::SpeedDec => todo!(),
-            SimpleAction::Rumble => todo!(),
-            SimpleAction::ToggleVis => todo!(),
+            SimpleAction::SpeedInc => println!("{:?} not yet implemented", self),
+            SimpleAction::SpeedDec => println!("{:?} not yet implemented", self),
+            SimpleAction::Rumble => println!("{:?} not yet implemented", self),
+            SimpleAction::ToggleVis => println!("{:?} not yet implemented", self),
         }
     }
 }
@@ -247,8 +247,8 @@ impl UpDownActionFn for UpDownAction {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
-            UpDownAction::SpeedDown => todo!(),
-            UpDownAction::KeyPress { key, modifiers } => todo!(),
+            UpDownAction::SpeedDown => println!("{:?} not yet implemented", self),
+            UpDownAction::KeyPress { key, modifiers } => println!("{:?} not yet implemented", self),
             UpDownAction::LuaScript { script } => {
                 let _ = interface.lua.load(script.as_str()).exec();
             }
@@ -281,8 +281,8 @@ impl UpDownActionFn for UpDownAction {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
             }
-            UpDownAction::SpeedDown => todo!(),
-            UpDownAction::KeyPress { key, modifiers } => todo!(),
+            UpDownAction::SpeedDown => println!("{:?} not yet implemented", self),
+            UpDownAction::KeyPress { key, modifiers } => println!("{:?} not yet implemented", self),
             UpDownAction::LuaScript { script } => {}
         }
     }
