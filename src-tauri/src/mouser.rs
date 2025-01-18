@@ -14,21 +14,10 @@ fn ease(x: f32) -> f32 {
     x
 }
 
+#[derive(Debug, Clone, Copy, Default)]
 struct Vec2<T> {
     pub x: T,
     pub y: T,
-}
-
-impl<T> Default for Vec2<T>
-where
-    T: Default,
-{
-    fn default() -> Self {
-        Self {
-            x: T::default(),
-            y: T::default(),
-        }
-    }
 }
 
 const POLL_TIME_MS: u64 = 1;
@@ -88,24 +77,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
 
     loop {
         let mut config = config_mx.lock().unwrap();
-        // match config.gamepad_id {
-        //     Some(id) => {
-        //         config.gamepad_id = gilrs.connected_gamepad(id).map(|gp| gp.id());
-        //     }
-        //     None => {}
-        // }
-        // if gilrs.gamepads().count() == 0 {
-        //     println!("None");
-        //     config.gamepad_id = None;
-        //
-        //     l_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
-        //     r_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
-        //     remainder = Vec2::<f32> { x: 0.0, y: 0.0 };
-        //
-        //     continue;
-        // } else {
-        //     println!("Some");
-        // }
 
         match (gilrs.gamepads().next(), config.gamepad_id) {
             (Some((conn_id, _)), None) => {

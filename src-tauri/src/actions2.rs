@@ -8,6 +8,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::{Emitter, WebviewWindow};
+use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
 #[derive(Clone, Debug)]
 pub struct ActionMap {
@@ -215,28 +216,71 @@ impl SimpleActionFn for SimpleAction {
 }
 
 pub trait UpDownActionFn {
-    fn down(&self, state: &ActionInterface);
-    fn up(&self, state: &ActionInterface);
+    fn down(&self, interface: &ActionInterface);
+    fn up(&self, interface: &ActionInterface);
 }
 
 impl UpDownActionFn for UpDownAction {
-    fn down(&self, state: &ActionInterface) {
+    fn down(&self, interface: &ActionInterface) {
         match self {
-            UpDownAction::Click(button) => todo!(),
-            UpDownAction::SpeedUp => todo!(),
+            UpDownAction::Click(button) => match button {
+                MouseButton::Left => {
+                    println!("left click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Right => {
+                    println!("right click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Middle => {
+                    println!("middle click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
+                    }
+                }
+            },
+            UpDownAction::SpeedUp => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult *= config.speed_up;
+            }
             UpDownAction::SpeedDown => todo!(),
             UpDownAction::KeyPress { key, modifiers } => todo!(),
             UpDownAction::LuaScript { script } => {
-                let lua = state.lua;
-                let _ = lua.load(script.as_str()).exec();
+                let _ = interface.lua.load(script.as_str()).exec();
             }
         }
     }
 
-    fn up(&self, state: &ActionInterface) {
+    fn up(&self, interface: &ActionInterface) {
         match self {
-            UpDownAction::Click(button) => todo!(),
-            UpDownAction::SpeedUp => todo!(),
+            UpDownAction::Click(button) => match button {
+                MouseButton::Left => {
+                    println!("left click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Right => {
+                    println!("right click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                    }
+                }
+                MouseButton::Middle => {
+                    println!("middle click");
+                    unsafe {
+                        kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
+                    }
+                }
+            },
+            UpDownAction::SpeedUp => {
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed_mult /= config.speed_up;
+            }
             UpDownAction::SpeedDown => todo!(),
             UpDownAction::KeyPress { key, modifiers } => todo!(),
             UpDownAction::LuaScript { script } => {}
