@@ -79,9 +79,10 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         let mut config = config_mx.lock().unwrap();
 
         match (gilrs.gamepads().next(), config.gamepad_id) {
-            (Some((conn_id, _)), None) => {
-                config.gamepad_id = Some(conn_id);
-                println!("Connected gamepad id: {}", conn_id);
+            (Some((gamepad_id, gamepad)), None) => {
+                config.gamepad_id = Some(gamepad_id);
+                println!("Connected gamepad id: {}", gamepad_id);
+                println!("Gamepad: {:?}", gamepad);
             }
             (None, _) => {
                 config.gamepad_id = None;
@@ -179,8 +180,8 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
             * UNIT_MULTIPLIER
             * POLL_TIME_MS as f32
             + remainder.y;
-        let (dx, x_rem) = head_and_tail(new_x);
-        let (dy, y_rem) = head_and_tail(new_y);
+        let (dx, x_rem) = integer_and_fractional(new_x);
+        let (dy, y_rem) = integer_and_fractional(new_y);
         remainder.x = x_rem;
         remainder.y = y_rem;
 
@@ -195,14 +196,14 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                 kbm::MOUSEEVENTF_WHEEL,
                 0,
                 0,
-                head_and_tail(r_stick.y * 3.2 * config.speed_mult).0,
+                integer_and_fractional(r_stick.y * 3.2 * config.speed_mult).0,
                 0,
             );
             kbm::mouse_event(
                 kbm::MOUSEEVENTF_HWHEEL,
                 0,
                 0,
-                head_and_tail(r_stick.x * 3.2 * config.speed_mult).0,
+                integer_and_fractional(r_stick.x * 3.2 * config.speed_mult).0,
                 0,
             );
         }
@@ -212,9 +213,12 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     }
 }
 
-fn head_and_tail(num: f32) -> (i32, f32) {
+fn integer_and_fractional(num: f32) -> (i32, f32) {
     if num >= 0.0 {
+        // positive
         return (num.floor() as i32, num % 1.0);
+    } else {
+        // negative
+        return (num.ceil() as i32, num % 1.0);
     }
-    (num.ceil() as i32, num % 1.0)
 }
