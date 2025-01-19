@@ -8,6 +8,8 @@ pub fn setup(
     config_mtx: Arc<Mutex<Config>>,
 ) -> impl FnOnce(&mut tauri::App) -> std::result::Result<(), Box<dyn std::error::Error>> {
     move |app: &mut tauri::App| {
+        config_mtx.lock().unwrap().set_config_dir(app.app_handle());
+
         // load the config instead of using the default
         match Config::load(app.app_handle()) {
             Ok(new_config) => {

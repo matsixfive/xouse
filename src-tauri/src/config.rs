@@ -66,6 +66,10 @@ impl Config {
             .join(if cfg!(windows) { "Xouse" } else { "xouse" })
     }
 
+    pub fn set_config_dir(&mut self, app_handle: &AppHandle) {
+        self.config_dir = Some(Self::config_dir(app_handle));
+    }
+
     fn config_file(&self) -> Option<PathBuf> {
         Some(self.config_dir.as_ref()?.join("config.toml"))
     }
@@ -75,7 +79,6 @@ impl Config {
     }
 
     pub fn save(&self) -> Result<()> {
-
         let config_dir = &self
             .config_dir
             .as_ref()
