@@ -89,9 +89,9 @@ impl Config {
         std::fs::create_dir_all(&config_dir)?;
 
         let config_file_path = self.config_file().ok_or(anyhow!("Config file not set"))?;
-        let mut config_file = std::fs::File::create(&config_file_path)?;
         if let Ok(contents) = std::fs::read_to_string(&config_file_path) {
             if let Ok(diff) = diff(self, &contents) {
+                let mut config_file = std::fs::File::create(&config_file_path)?;
                 config_file.write_all(diff.as_bytes())?;
                 return Ok(());
             } else {
@@ -102,6 +102,7 @@ impl Config {
         }
 
         let stringified = toml::to_string(&self)?;
+        let mut config_file = std::fs::File::create(&config_file_path)?;
         config_file.write_all(stringified.as_bytes())?;
 
         log::info!("Saved config");
@@ -109,7 +110,6 @@ impl Config {
     }
 
     pub fn load(app_handle: &AppHandle) -> Result<Self> {
-
         let config_dir_path = Self::config_dir(app_handle);
         log::info!("Loading config from {:?}", config_dir_path);
         std::fs::create_dir_all(&config_dir_path)?;
@@ -133,7 +133,11 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
     let serialized = toml::to_string(config)?;
     let new_doc = serialized.parse::<toml_edit::Document>()?;
 
-    println!("doc:\n{}\n\nnew:\n{}",&doc.to_string(), &new_doc.to_string());
+    println!(
+        "doc:\n{}\n\nnew:\n{}",
+        &doc.to_string(),
+        &new_doc.to_string()
+    );
 
     log::info!("Diffing config");
 
