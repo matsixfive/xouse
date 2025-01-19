@@ -12,7 +12,6 @@ pub fn setup(
         if let Ok(new_config) = Config::load(app.app_handle()) {
             let mut config = config_mtx.lock().unwrap();
             *config = new_config;
-            println!("Loaded config: {:?}", *config);
             log::info!("Loaded config: {:?}", *config);
             config.save().unwrap();
         } else {

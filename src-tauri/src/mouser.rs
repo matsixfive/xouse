@@ -82,7 +82,6 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
             (Some((gamepad_id, gamepad)), None) => {
                 config.gamepad_id = Some(gamepad_id);
                 println!("Connected gamepad id: {}", gamepad_id);
-                println!("Gamepad: {:?}", gamepad);
             }
             (None, _) => {
                 config.gamepad_id = None;
