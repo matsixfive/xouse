@@ -24,6 +24,10 @@
 	// $: {if (config) config.actions = cfg}
 
 	onMount(async () => {
+		invoke("timing", { time_in: Date.now().toString() }).then((v) =>
+			console.log(v),
+		);
+
 		invoke("get_speed").then((value: unknown) => {
 			if (value && typeof value === "number") speed = value;
 		});

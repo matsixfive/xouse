@@ -32,7 +32,9 @@ fn main() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![get_speed, set_speed, get_config,])
+        .invoke_handler(tauri::generate_handler![
+            get_speed, set_speed, get_config, timing
+        ])
         .manage(AppState {
             config: Arc::clone(&config_mtx),
         })
@@ -66,4 +68,12 @@ fn get_config(state: tauri::State<AppState>) -> Result<Config, String> {
     let config = state.config.lock().map_err(|e| e.to_string())?;
     log::info!("got config: {:?}", *config);
     Ok(config.clone())
+}
+
+#[tauri::command]
+fn timing(time_in: String) -> Result<(String, String), String> {
+    let time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?;
+    Ok((time_in, time.as_millis().to_string()))
 }
