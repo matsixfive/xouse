@@ -124,6 +124,8 @@ impl Config {
 }
 
 fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<String> {
+    use toml_edit::Item;
+
     let mut doc = toml_content.parse::<toml_edit::Document>()?;
 
     // Serialize the config object into a TOML string
@@ -142,9 +144,13 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
             // If the value is different, update it
             dbg!(&old_value, &new_value);
 
-            if old_value.to_string() != new_value.to_string() {
+            if !deep_cmp(old_value, new_value) {
                 doc[key] = new_value.clone();
             }
+
+            // if old_value.to_string() != new_value.to_string() {
+            //     doc[key] = new_value.clone();
+            // }
         } else {
             // If the key doesn't exist, add it
             doc[key] = new_value.clone();
@@ -154,4 +160,33 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
     // Return the new TOML content as a string
 
     Ok(doc.to_string())
+}
+
+fn cmp_value(a: &toml_edit::Value, b: &toml_edit::Value) -> bool {
+    match (a, b) {
+        (toml_edit::Value::Integer(a), toml_edit::Value::Integer(b)) => a == b,
+        (toml_edit::Value::Float(a), toml_edit::Value::Float(b)) => a == b,
+        (toml_edit::Value::Boolean(a), toml_edit::Value::Boolean(b)) => a == b,
+        (toml_edit::Value::String(a), toml_edit::Value::String(b)) => a == b,
+        _ => false,
+    }
+}
+
+fn table_cmp(a: &toml_edit::Table, b: &toml_edit::Table) -> bool {
+    a.iter()
+        .all(|(k, v)| b.get(k).map_or(false, |bv| deep_cmp(v, bv)))
+}
+
+fn deep_cmp(a: &toml_edit::Item, b: &toml_edit::Item) -> bool {
+    match (a, b) {
+        (toml_edit::Item::None, toml_edit::Item::None) => true,
+        (toml_edit::Item::Value(a), toml_edit::Item::Value(b)) => cmp_value(a, b),
+        (toml_edit::Item::Table(a), toml_edit::Item::Table(b)) => a
+            .iter()
+            .all(|(k, v)| b.get(k).map_or(false, |bv| deep_cmp(v, bv))),
+        (toml_edit::Item::ArrayOfTables(a), toml_edit::Item::ArrayOfTables(b)) => {
+            a.iter().zip(b.iter()).all(|(a, b)| table_cmp(a, b))
+        }
+        _ => false,
+    }
 }
