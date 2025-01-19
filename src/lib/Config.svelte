@@ -29,9 +29,13 @@
 
 		invoke("get_config").then((v: unknown) => {
 			console.log(v);
+			try {
 			const c = Config.parse(v);
 			if (!c) return;
 			config = c;
+			} catch (e) {
+				console.error(e);
+			}
 		});
 
 		listeners.push(

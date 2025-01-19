@@ -57,38 +57,27 @@ pub fn setup(
         let tray_icon_image =
             tauri::image::Image::new(include_bytes!("../icons/128x128.png"), 128, 128);
 
-        let hide_mtx = Arc::new(Mutex::new(hide));
-        let menu_event_hide = hide_mtx.clone();
-        let tray_event_hide = hide_mtx.clone();
-
         let _tray = tauri::tray::TrayIconBuilder::new()
             .menu(&tray_menu)
             .icon(tray_icon_image)
             .on_menu_event(move |app, event| match event.id().as_ref() {
                 "hide" => {
                     if let Some(webview_window) = app.get_webview_window("main") {
-                        let hide = menu_event_hide.lock().unwrap();
                         if hide.is_checked().unwrap_or(false) {
-                            if let Err(e) = webview_window.hide() {
-                                log::error!("Could not hide window: {:?}", e);
-                                let _ = hide.set_checked(false);
-                            }
+                            let _ = webview_window.hide();
                         } else {
-                            if let Err(e) = webview_window.show() {
-                                log::error!("Could not show window: {:?}", e);
-                                let _ = hide.set_checked(true);
-                            }
+                            let _ = webview_window.show();
                             let _ = webview_window.set_focus();
                         }
                     }
                 }
                 "quit" => {
-                    log::info!("Quitting");
+                    dbg!("Quit");
                     app.exit(0);
                 }
                 _ => eprintln!("Unknown tray event: {:?}", event),
             })
-            .on_tray_icon_event(move |tray, event| {
+            .on_tray_icon_event(|tray, event| {
                 if let tauri::tray::TrayIconEvent::Click {
                     button: tauri::tray::MouseButton::Left,
                     button_state: tauri::tray::MouseButtonState::Up,
@@ -97,17 +86,12 @@ pub fn setup(
                 {
                     let app = tray.app_handle();
                     if let Some(webview_window) = app.get_webview_window("main") {
-                        if let Err(e) = webview_window.show() {
-                            log::error!("Could not show window: {:?}", e);
-                            let hide = tray_event_hide.lock().unwrap();
-                            let _ = hide.set_checked(true);
-                        }
+                        let _ = webview_window.show();
                         let _ = webview_window.set_focus();
                     }
                 }
             })
             .build(app)?;
-
         Ok(())
     }
 }

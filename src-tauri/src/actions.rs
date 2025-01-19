@@ -1,6 +1,5 @@
 use crate::config::Config;
 use gilrs::Button;
-use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

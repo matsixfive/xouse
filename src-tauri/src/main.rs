@@ -28,7 +28,8 @@ fn main() {
                 // ))
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::Webview,
-                )).level(log::LevelFilter::Info)
+                ))
+                .level(log::LevelFilter::Info)
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![get_speed, set_speed, get_config,])
@@ -48,18 +49,19 @@ fn main() {
 
 #[tauri::command]
 fn get_speed(state: tauri::State<AppState>) -> Result<f32, String> {
-    let config = state.config.lock().unwrap();
+    let config = state.config.lock().map_err(|e| e.to_string())?;
     Ok(config.speed)
 }
 
 #[tauri::command]
-fn set_speed(state: tauri::State<AppState>, speed: f32) {
-    let mut config = state.config.lock().unwrap();
+fn set_speed(state: tauri::State<AppState>, speed: f32) -> Result<(), String> {
+    let mut config = state.config.lock().map_err(|e| e.to_string())?;
     config.speed = speed;
+    Ok(())
 }
 
 #[tauri::command]
 fn get_config(state: tauri::State<AppState>) -> Result<Config, String> {
-    let config = state.config.lock().unwrap();
+    let config = state.config.lock().map_err(|e| e.to_string())?;
     Ok(config.clone())
 }
