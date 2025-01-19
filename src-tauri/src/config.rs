@@ -79,14 +79,27 @@ impl Config {
     }
 
     pub fn save(&self) -> Result<()> {
-        let config_dir = &self
+        let config_dir = self
             .config_dir
             .as_ref()
             .ok_or(anyhow!("Config directory not set"))?;
 
-        log::info!("Saving config at {:?}", &self.config_dir);
+        log::info!("Saving config at {:?}", config_dir);
+
         std::fs::create_dir_all(&config_dir)?;
-        let mut config_file = std::fs::File::create(Self::with_config_file(config_dir))?;
+
+        let config_file_path = self.config_file().ok_or(anyhow!("Config file not set"))?;
+        let mut config_file = std::fs::File::create(&config_file_path)?;
+        if let Ok(contents) = std::fs::read_to_string(&config_file_path) {
+            if let Ok(diff) = diff(self, &contents) {
+                config_file.write_all(diff.as_bytes())?;
+                return Ok(());
+            } else {
+                log::error!("Could not diff config file");
+            }
+        } else {
+            log::error!("Could not read config file");
+        }
 
         let stringified = toml::to_string(&self)?;
         config_file.write_all(stringified.as_bytes())?;
@@ -110,10 +123,7 @@ impl Config {
     }
 }
 
-fn diff<T: serde::Serialize>(
-    config: &T,
-    toml_content: &str,
-) -> anyhow::Result<String> {
+fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<String> {
     let mut doc = toml_content.parse::<toml_edit::Document>()?;
 
     // Serialize the config object into a TOML string
