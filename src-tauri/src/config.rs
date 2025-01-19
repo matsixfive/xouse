@@ -27,7 +27,7 @@ pub struct Config {
 }
 
 const fn speed_default() -> f32 {
-    70.0
+    71.0
 }
 
 const fn speed_mult_default() -> f32 {
