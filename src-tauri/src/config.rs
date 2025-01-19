@@ -135,6 +135,7 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
 
     // Compare and update the document
     for (key, new_value) in new_doc.iter() {
+        log::info!("Checking key: {}", key);
         if let Some(old_value) = doc.get(key) {
             // If the value is different, update it
             dbg!(&old_value, &new_value);
