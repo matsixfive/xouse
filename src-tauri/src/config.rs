@@ -109,3 +109,34 @@ impl Config {
         Ok(config)
     }
 }
+
+fn diff<T: serde::Serialize>(
+    config: &T,
+    toml_content: &str,
+) -> anyhow::Result<String> {
+    let mut doc = toml_content.parse::<toml_edit::Document>()?;
+
+    // Serialize the config object into a TOML string
+
+    let serialized = toml::to_string(config)?;
+    let new_doc = serialized.parse::<toml_edit::Document>()?;
+
+    // Compare and update the document
+    for (key, new_value) in new_doc.iter() {
+        if let Some(old_value) = doc.get(key) {
+            // If the value is different, update it
+            dbg!(&old_value, &new_value);
+
+            if old_value.to_string() != new_value.to_string() {
+                doc[key] = new_value.clone();
+            }
+        } else {
+            // If the key doesn't exist, add it
+            doc[key] = new_value.clone();
+        }
+    }
+
+    // Return the new TOML content as a string
+
+    Ok(doc.to_string())
+}
