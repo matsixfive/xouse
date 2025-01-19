@@ -126,8 +126,6 @@ impl Config {
 }
 
 fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<String> {
-    use toml_edit::Item;
-
     let mut doc = toml_content.parse::<toml_edit::Document>()?;
 
     // Serialize the config object into a TOML string
@@ -135,7 +133,7 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
     let serialized = toml::to_string(config)?;
     let new_doc = serialized.parse::<toml_edit::Document>()?;
 
-    println!("{}\n\n{}",&doc.to_string(), &new_doc.to_string());
+    println!("doc:\n{}\n\nnew:\n{}",&doc.to_string(), &new_doc.to_string());
 
     log::info!("Diffing config");
 
