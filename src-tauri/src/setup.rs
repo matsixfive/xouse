@@ -17,6 +17,8 @@ pub fn setup(
         } else {
             let config_file = Config::with_config_file(&Config::config_dir(app.app_handle()));
             log::error!("Could not load config from {:?}", config_file);
+            log::info!("Using default config");
+            let _ = config_mtx.lock().unwrap().save();
         }
 
         let speed_event_config = config_mtx.clone();
