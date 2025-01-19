@@ -176,7 +176,10 @@ fn cmp_value(a: &toml_edit::Value, b: &toml_edit::Value) -> bool {
         (toml_edit::Value::InlineTable(a), toml_edit::Value::InlineTable(b)) => {
             inline_table_cmp(a, b)
         }
-        _ => false,
+        _ => {
+            log::info!("{} != {}", a, b);
+            false
+        }
     }
 }
 
@@ -204,6 +207,9 @@ fn deep_cmp(a: &toml_edit::Item, b: &toml_edit::Item) -> bool {
         (toml_edit::Item::ArrayOfTables(a), toml_edit::Item::ArrayOfTables(b)) => {
             a.iter().zip(b.iter()).all(|(a, b)| table_cmp(a, b))
         }
-        _ => false,
+        _ => {
+            log::info!("{} != {}", a, b);
+            false
+        }
     }
 }
