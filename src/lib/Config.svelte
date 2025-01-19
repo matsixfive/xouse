@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { onDestroy, onMount } from "svelte";
 	import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
-	import Binding from "./Binding.svelte";
+
 	import {
 		Config,
 		type ActionType,
 		type ConfigType,
 		BasicAction,
-		type BasicActionType,
 		ClickAction,
 		KeypressAction,
 	} from "./bindings";
@@ -96,17 +95,7 @@
 		{#each Object.entries(config.actions) as [button, actions]}
 			<p>{button}</p>
 			{#each actions as action}
-				{#if getActionType(action) == BasicAction }
-					<li>{action}</li>
-				{:else if getActionType(action) == ClickAction}
-					<li>Click: {action.Click}</li>
-				{:else if getActionType(action) == KeypressAction}
-					<li>Key: {action.KeyPress[0]}
-						{#each action.KeyPress[1] as mod}
-							<li style="margin-left:10px;">{mod}</li>
-						{/each}
-					</li>
-				{/if}
+			 {action}
 			{/each}
 		{/each}
 	{/if}

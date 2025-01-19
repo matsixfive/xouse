@@ -73,6 +73,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
 
     let lua_ctx = crate::lua::init_lua().unwrap();
 
+    let mut has_debug_logged = false;
     loop {
         let mut config = config_mx.lock().unwrap();
 
@@ -86,11 +87,16 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                 l_stick = Vec2::default();
                 r_stick = Vec2::default();
                 remainder = Vec2::default();
-                log::error!("No gamepad connected");
+                if !has_debug_logged {
+                    log::debug!("No gamepad connected");
+                    has_debug_logged = true;
+                }
                 thread::sleep(Duration::from_millis(1000));
+                continue;
             }
             _ => {}
         }
+        has_debug_logged = false;
 
         while let Some(event) = gilrs.next_event() {
             match config.gamepad_id {
