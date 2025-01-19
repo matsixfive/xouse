@@ -145,6 +145,9 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
             dbg!(&old_value, &new_value);
 
             if !deep_cmp(old_value, new_value) {
+                log::info!("Updating key: {}", key);
+                log::info!("Old: {:?}", old_value);
+                log::info!("New: {:?}", new_value);
                 doc[key] = new_value.clone();
             }
 
