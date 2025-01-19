@@ -27,19 +27,14 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     let mut gilrs = Gilrs::new().unwrap();
 
     // print all connected gamepads
-    println!("Connected gamepads:");
-    for (id, gp) in gilrs.gamepads() {
-        println!("Connected gamepad id: {}", id);
-        println!("Gamepad: {}", gp.name());
-    }
-    println!("End of connected gamepads");
+    log::info!("Connected gamepads: {:?}", gilrs.gamepads().map(|(id, _)| id).collect::<Vec<_>>());
 
     let support_ff = gilrs
         .gamepads()
         .filter_map(|(id, gp)| if gp.is_ff_supported() { Some(id) } else { None })
         .collect::<Vec<_>>();
 
-    dbg!(&support_ff);
+    log::info!("Gamepads with FF support: {:?}", support_ff);
 
     let duration = ff::Ticks::from_ms(1);
     let effect = ff::EffectBuilder::new()
@@ -60,7 +55,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     effect.set_repeat(ff::Repeat::For(duration)).unwrap();
 
     let rumble: Arc<Box<dyn Fn() + Send + Sync>> = Arc::new(Box::new(move || {
-        println!("rumbling");
+        log::info!("rumbling");
         let _ = effect.play();
     }));
 
@@ -79,9 +74,8 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         let mut config = config_mx.lock().unwrap();
 
         match (gilrs.gamepads().next(), config.gamepad_id) {
-            (Some((gamepad_id, gamepad)), None) => {
+            (Some((gamepad_id, _gamepad)), None) => {
                 config.gamepad_id = Some(gamepad_id);
-                println!("Connected gamepad id: {}", gamepad_id);
             }
             (None, _) => {
                 config.gamepad_id = None;
@@ -89,7 +83,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                 l_stick = Vec2::default();
                 r_stick = Vec2::default();
                 remainder = Vec2::default();
-                println!("No gamepad connected");
+                log::error!("No gamepad connected");
                 thread::sleep(Duration::from_millis(1000));
             }
             _ => {}
@@ -128,7 +122,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                             Action::Simple(action) => action.call(&action_interface),
                             Action::UpDown(action) => action.down(&action_interface),
                         } {
-                            eprintln!("Error: {:?}", e);
+                            log::error!("Error: {:?}", e);
                         }
                     }
                     config = config_mx.lock().unwrap();
@@ -154,7 +148,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                             Action::UpDown(action) => action.up(&action_interface),
                             _ => Ok(()),
                         } {
-                            eprintln!("Error: {:?}", e);
+                            log::error!("Error: {:?}", e);
                         }
                     }
                     config = config_mx.lock().unwrap();

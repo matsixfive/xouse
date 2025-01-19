@@ -75,35 +75,33 @@ impl Config {
     }
 
     pub fn save(&self) -> Result<()> {
-        println!("Saving config");
 
         let config_dir = &self
             .config_dir
             .as_ref()
             .ok_or(anyhow!("Config directory not set"))?;
-        println!("Config path: {:?}", &self.config_dir);
+
+        log::info!("Saving config at {:?}", &self.config_dir);
         std::fs::create_dir_all(&config_dir)?;
         let mut config_file = std::fs::File::create(Self::with_config_file(config_dir))?;
 
         let stringified = toml::to_string(&self)?;
         config_file.write_all(stringified.as_bytes())?;
 
-        println!("Saved config");
+        log::info!("Saved config");
         Ok(())
     }
 
     pub fn load(app_handle: &AppHandle) -> Result<Self> {
-        println!("Loading config");
-
         let config_dir_path = Self::config_dir(app_handle);
-        println!("Config path: {:?}", config_dir_path);
+        log::info!("Loading config from {:?}", config_dir_path);
         std::fs::create_dir_all(&config_dir_path)?;
 
         let config_file_path = Self::with_config_file(&config_dir_path);
         let config_text = std::fs::read_to_string(config_file_path)?;
         let config: Self = toml::from_str(&config_text)?;
 
-        println!("Loaded config");
+        log::info!("Loaded config");
         Ok(config)
     }
 }
