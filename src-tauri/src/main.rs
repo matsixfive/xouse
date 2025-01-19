@@ -26,6 +26,14 @@ fn main() {
     dbg!(line!());
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                ))
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![get_speed, set_speed, get_config,])
         .manage(AppState {
             config: Arc::clone(&config_mtx),
@@ -36,9 +44,10 @@ fn main() {
                 let mut config = config_mtx.lock().unwrap();
                 *config = new_config;
                 println!("Loaded config: {:?}", *config);
+                log::info!("Loaded config: {:?}", *config);
                 config.save().unwrap();
             } else {
-                eprintln!("Could not load config");
+                log::error!("Could not load config");
             }
 
             let speed_event_config = config_mtx.clone();
