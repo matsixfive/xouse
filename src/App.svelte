@@ -1,6 +1,6 @@
 <script lang="ts" async>
 	import { attachConsole } from "@tauri-apps/plugin-log";
-	const detach = await attachConsole();
+	const detach = attachConsole();
 
 	import Config from "./lib/Config.svelte";
 </script>
