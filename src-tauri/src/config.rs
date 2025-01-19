@@ -58,7 +58,7 @@ impl Default for Config {
 }
 
 impl Config {
-    fn config_dir(app_handle: &AppHandle) -> PathBuf {
+    pub fn config_dir(app_handle: &AppHandle) -> PathBuf {
         app_handle
             .path()
             .config_dir()
@@ -70,7 +70,7 @@ impl Config {
         Some(self.config_dir.as_ref()?.join("config.toml"))
     }
 
-    fn with_config_file(config_dir: &PathBuf) -> PathBuf {
+    pub fn with_config_file(config_dir: &PathBuf) -> PathBuf {
         config_dir.join("config.toml")
     }
 
