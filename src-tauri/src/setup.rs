@@ -19,7 +19,9 @@ pub fn setup(
             Err(e) => {
                 log::error!("Could not load config {:?}", e);
                 log::info!("Using default config");
-                let _ = config_mtx.lock().unwrap().save();
+                if let Err(e) =  config_mtx.lock().unwrap().save() {
+                    log::error!("Could not save default config {:?}", e);
+                }
             }
         }
 
