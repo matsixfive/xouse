@@ -11,6 +11,7 @@
 		KeypressAction,
 	} from "./bindings";
 	import { invoke } from "@tauri-apps/api/core";
+	import { ZodError } from "zod";
 
 	let speed = 50;
 
@@ -30,11 +31,17 @@
 		invoke("get_config").then((v: unknown) => {
 			console.log(v);
 			try {
-			const c = Config.parse(v);
-			if (!c) return;
-			config = c;
+				const c = Config.parse(v);
+				if (!c) return;
+				config = c;
 			} catch (e) {
-				console.error(e);
+				if (e instanceof ZodError) {
+					console.log("zod error");
+					console.error(e.format());
+				} else {
+					console.log("error");
+					console.error(e);
+				}
 			}
 		});
 
@@ -72,12 +79,22 @@
 		emit("save_config");
 	}}
 >
-	<input type="range" min="0" max="100" step="1" on:input={e => {
-			invoke("update_taskbar_progress", { progress: parseInt(e.currentTarget.value) / 100 });
-		}} />
-	<button on:click={() => {
-		invoke("clear_taskbar_progress");
-	}}>Reset</button>
+	<input
+		type="range"
+		min="0"
+		max="100"
+		step="1"
+		on:input={(e) => {
+			invoke("update_taskbar_progress", {
+				progress: parseInt(e.currentTarget.value) / 100,
+			});
+		}}
+	/>
+	<button
+		on:click={() => {
+			invoke("clear_taskbar_progress");
+		}}>Reset</button
+	>
 	<h1>
 		Speed:
 		<input
@@ -99,7 +116,7 @@
 		{#each Object.entries(config.actions) as [button, actions]}
 			<p>{button}</p>
 			{#each actions as action}
-			 {action}
+				{action}
 			{/each}
 		{/each}
 	{/if}
