@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from "svelte";
-	import { emit, listen, type UnlistenFn } from "@tauri-apps/api";
+	import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 	import Binding from "./Binding.svelte";
 	import {
 		Config,
