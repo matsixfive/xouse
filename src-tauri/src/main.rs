@@ -19,6 +19,8 @@ struct AppState {
 }
 
 fn main() {
+    env_logger::init();
+
     // use the default config
     // later will try to load the config from a file
     let config_mtx = Arc::new(Mutex::new(Config::default()));
