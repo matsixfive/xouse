@@ -1,5 +1,8 @@
-<script lang="ts">
-	import Config from './lib/Config.svelte';
+<script lang="ts" async>
+	import { attachConsole } from "@tauri-apps/plugin-log";
+	const detach = await attachConsole();
+
+	import Config from "./lib/Config.svelte";
 </script>
 
 <main>
@@ -9,6 +12,6 @@
 <style lang="scss">
 	main {
 		overflow-y: scroll;
-		height:100vh;
+		height: 100vh;
 	}
 </style>
