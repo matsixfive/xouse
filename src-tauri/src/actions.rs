@@ -265,19 +265,19 @@ impl UpDownActionFn for UpDownAction {
         match self {
             UpDownAction::Click(button) => match button {
                 MouseButton::Left => {
-                    println!("left click");
+                    log::info!(target: "actions", "left click");
                     unsafe {
                         kbm::mouse_event(kbm::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                     }
                 }
                 MouseButton::Right => {
-                    println!("right click");
+                    log::info!(target: "actions", "right click");
                     unsafe {
                         kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
                     }
                 }
                 MouseButton::Middle => {
-                    println!("middle click");
+                    log::info!(target: "actions", "middle click");
                     unsafe {
                         kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
                     }
@@ -292,7 +292,7 @@ impl UpDownActionFn for UpDownAction {
                 config.speed_mult /= config.speed_up;
             }
             UpDownAction::KeyPress { key, modifiers } => {
-                println!("pressing {:?} with modifiers {:?}", key, modifiers);
+                dbg!("pressing {:?} with modifiers {:?}", key, modifiers);
 
                 for modifier in modifiers {
                     rdev::simulate(&rdev::EventType::KeyPress(modifier.into()))?;
@@ -311,19 +311,19 @@ impl UpDownActionFn for UpDownAction {
         match self {
             UpDownAction::Click(button) => match button {
                 MouseButton::Left => {
-                    println!("left click");
+                    dbg!("left click");
                     unsafe {
                         kbm::mouse_event(kbm::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                     }
                 }
                 MouseButton::Right => {
-                    println!("right click");
+                    dbg!("right click");
                     unsafe {
                         kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
                     }
                 }
                 MouseButton::Middle => {
-                    println!("middle click");
+                    dbg!("middle click");
                     unsafe {
                         kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
                     }
@@ -338,7 +338,7 @@ impl UpDownActionFn for UpDownAction {
                 config.speed_mult *= config.speed_up;
             }
             UpDownAction::KeyPress { key, modifiers } => {
-                println!("releasing {:?} with modifiers {:?}", key, modifiers);
+                dbg!("releasing {:?} with modifiers {:?}", key, modifiers);
 
                 rdev::simulate(&rdev::EventType::KeyRelease(*key))?;
 
