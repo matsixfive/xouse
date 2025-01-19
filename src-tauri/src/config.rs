@@ -128,8 +128,6 @@ impl Config {
 fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<String> {
     let mut doc = toml_content.parse::<toml_edit::Document>()?;
 
-    // Serialize the config object into a TOML string
-
     let serialized = toml::to_string(config)?;
     let new_doc = serialized.parse::<toml_edit::Document>()?;
 
@@ -141,7 +139,6 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
 
     log::info!("Diffing config");
 
-    // Compare and update the document
     for (key, new_value) in new_doc.iter() {
         log::info!("Checking key: {}", key);
         if let Some(old_value) = doc.get(key) {
@@ -151,10 +148,6 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
                 log::info!("Updating key: {}", key);
                 doc[key] = new_value.clone();
             }
-
-            // if old_value.to_string() != new_value.to_string() {
-            //     doc[key] = new_value.clone();
-            // }
         } else {
             // If the key doesn't exist, add it
             doc[key] = new_value.clone();

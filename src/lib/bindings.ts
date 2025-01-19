@@ -1,43 +1,5 @@
 import { z } from "zod";
 
-// export const buttons = {
-// 	South: "A",
-// 	East: "B",
-// 	West: "X",
-// 	North: "Y",
-// 	DPadUp: "DPad Up",
-// 	DPadDown: "DPad Down",
-// 	DPadLeft: "DPad Left",
-// 	DPadRight: "DPad Right",
-// 	LeftTrigger2: "Left Bumper",
-// 	RightTrigger2: "Right Bumper",
-// 	LeftTrigger: "Left Trigger",
-// 	RightTrigger: "Right Trigger",
-// 	LeftThumb: "Left Stick",
-// 	RightThumb: "Right Stick",
-// 	Start: "Start",
-// 	Select: "Select",
-// } as const;
-// export type Button = keyof typeof buttons;
-// export const buttonKeys = Object.keys(buttons) as Button[]
-//
-// export const actions = {
-// 	None: "None",
-// 	LClick: "Left Click",
-// 	RClick: "Right Click",
-// 	MClick: "Middle Click",
-// 	SpeedUp: "Speed Up",
-// 	SpeedDown: "Slow Down",
-// 	SpeedInc: "Add Speed",
-// 	SpeedDec: "Subtract Speed",
-// 	Rumble: "Rumble",
-// 	KeyPress: "Key Press",
-// } as const;
-// export type Action = keyof typeof actions;
-// export const actionKeys = Object.keys(actions) as Action[];
-//
-// export type A = (Action | { KeyPress: [string, string[]] })[]
-
 export const BasicAction = z.enum(["None", "SpeedUp", "SpeedDown", "SpeedInc", "SpeedDec", "Rumble", "ToggleVis"]);
 export const ClickAction = z.object({ Click: z.enum(["Left", "Middle", "Right"]) });
 export const KeypressAction =
@@ -83,29 +45,3 @@ export const Config = z.object({
 });
 
 export type ConfigType = z.infer<typeof Config>
-
-// export type Config = {
-// 	speed: number,
-// 	speed_down: number,
-// 	speed_up: number,
-// 	speed_inc: number,
-// 	speed_dec: number,
-// 	actions: {
-// 		South?: A[],
-// 		East?: A[],
-// 		West?: A[],
-// 		North?: A[],
-// 		DPadUp?: A[],
-// 		DPadDown?: A[],
-// 		DPadLeft?: A[],
-// 		DPadRight?: A[],
-// 		LeftTrigger2?: A[],
-// 		RightTrigger2?: A[],
-// 		LeftTrigger?: A[],
-// 		RightTrigger?: A[],
-// 		LeftThumb?: A[],
-// 		RightThumb?: A[],
-// 		Start?: A[],
-// 		Select?: A[],
-// 	}
-// };

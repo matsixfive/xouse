@@ -1,11 +1,11 @@
 <script lang="ts">
 	import DropDown from "./DropDown.svelte";
-    import type { AType } from "./bindings";
+    import type { ActionType } from "./bindings";
 	// import { buttons, actions as allActions } from "./bindings";
 	// import type { AType, Button } from "./bindings";
 
 	export let button: any;
-	export let action: AType;
+	export let action: ActionType;
 
 	const handleInput = (e: CustomEvent) => {
 		console.log(button, e.detail);
