@@ -11,17 +11,13 @@ mod setup;
 use config::Config;
 use std::{
     sync::{Arc, Mutex},
-    thread,
 };
-use tauri::{menu, Listener, Manager};
 
 struct AppState {
     config: Arc<Mutex<Config>>,
 }
 
 fn main() {
-    env_logger::init();
-
     // use the default config
     // later will try to load the config from a file
     let config_mtx = Arc::new(Mutex::new(Config::default()));
