@@ -28,7 +28,9 @@
 			if (value && typeof value === "number") speed = value;
 		});
 
+		console.log("getting config");
 		invoke("get_config").then((v: unknown) => {
+			console.log("got config");
 			console.log(v);
 			try {
 				const c = Config.parse(v);
