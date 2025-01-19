@@ -99,7 +99,8 @@ impl Config {
 
         let config_file_path = Self::with_config_file(&config_dir_path);
         let config_text = std::fs::read_to_string(config_file_path)?;
-        let config: Self = toml::from_str(&config_text)?;
+        let mut config: Self = toml::from_str(&config_text)?;
+        config.config_dir = Some(config_dir_path);
 
         log::info!("Loaded config");
         Ok(config)
