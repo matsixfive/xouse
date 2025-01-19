@@ -109,6 +109,8 @@ impl Config {
     }
 
     pub fn load(app_handle: &AppHandle) -> Result<Self> {
+        return Ok(Self::default());
+
         let config_dir_path = Self::config_dir(app_handle);
         log::info!("Loading config from {:?}", config_dir_path);
         std::fs::create_dir_all(&config_dir_path)?;
@@ -133,7 +135,7 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
     let serialized = toml::to_string(config)?;
     let new_doc = serialized.parse::<toml_edit::Document>()?;
 
-    dbg!(&doc.to_string(), &new_doc.to_string());
+    println!("{}\n\n{}",&doc.to_string(), &new_doc.to_string());
 
     log::info!("Diffing config");
 
