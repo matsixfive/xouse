@@ -109,7 +109,6 @@ impl Config {
     }
 
     pub fn load(app_handle: &AppHandle) -> Result<Self> {
-        return Ok(Self::default());
 
         let config_dir_path = Self::config_dir(app_handle);
         log::info!("Loading config from {:?}", config_dir_path);
@@ -118,6 +117,7 @@ impl Config {
         let config_file_path = Self::with_config_file(&config_dir_path);
         let config_text = std::fs::read_to_string(config_file_path)?;
         let mut config: Self = toml::from_str(&config_text)?;
+        let mut config = Self::default();
         config.config_dir = Some(config_dir_path);
 
         log::info!("Loaded config");
