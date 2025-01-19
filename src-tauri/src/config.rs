@@ -164,17 +164,31 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
 
 fn cmp_value(a: &toml_edit::Value, b: &toml_edit::Value) -> bool {
     match (a, b) {
-        (toml_edit::Value::Integer(a), toml_edit::Value::Integer(b)) => a == b,
-        (toml_edit::Value::Float(a), toml_edit::Value::Float(b)) => a == b,
-        (toml_edit::Value::Boolean(a), toml_edit::Value::Boolean(b)) => a == b,
-        (toml_edit::Value::String(a), toml_edit::Value::String(b)) => a == b,
+        (toml_edit::Value::String(a), toml_edit::Value::String(b)) => a.value() == b.value(),
+        (toml_edit::Value::Integer(a), toml_edit::Value::Integer(b)) => a.value() == b.value(),
+        (toml_edit::Value::Float(a), toml_edit::Value::Float(b)) => a.value() == b.value(),
+        (toml_edit::Value::Boolean(a), toml_edit::Value::Boolean(b)) => a.value() == b.value(),
+        (toml_edit::Value::Datetime(a), toml_edit::Value::Datetime(b)) => a.value() == b.value(),
+        (toml_edit::Value::Array(a), toml_edit::Value::Array(b)) => array_cmp(a, b),
+        (toml_edit::Value::InlineTable(a), toml_edit::Value::InlineTable(b)) => {
+            inline_table_cmp(a, b)
+        }
         _ => false,
     }
+}
+
+fn array_cmp(a: &toml_edit::Array, b: &toml_edit::Array) -> bool {
+    a.iter().zip(b.iter()).all(|(a, b)| cmp_value(a, b))
 }
 
 fn table_cmp(a: &toml_edit::Table, b: &toml_edit::Table) -> bool {
     a.iter()
         .all(|(k, v)| b.get(k).map_or(false, |bv| deep_cmp(v, bv)))
+}
+
+fn inline_table_cmp(a: &toml_edit::InlineTable, b: &toml_edit::InlineTable) -> bool {
+    a.iter()
+        .all(|(k, v)| b.get(k).map_or(false, |bv| cmp_value(v, bv)))
 }
 
 fn deep_cmp(a: &toml_edit::Item, b: &toml_edit::Item) -> bool {
