@@ -9,16 +9,18 @@ pub fn setup(
 ) -> impl FnOnce(&mut tauri::App) -> std::result::Result<(), Box<dyn std::error::Error>> {
     move |app: &mut tauri::App| {
         // load the config instead of using the default
-        if let Ok(new_config) = Config::load(app.app_handle()) {
-            let mut config = config_mtx.lock().unwrap();
-            *config = new_config;
-            log::info!("Loaded config: {:?}", *config);
-            config.save().unwrap();
-        } else {
-            let config_file = Config::with_config_file(&Config::config_dir(app.app_handle()));
-            log::error!("Could not load config from {:?}", config_file);
-            log::info!("Using default config");
-            let _ = config_mtx.lock().unwrap().save();
+        match Config::load(app.app_handle()) {
+            Ok(new_config) => {
+                let mut config = config_mtx.lock().unwrap();
+                *config = new_config;
+                log::info!("Loaded config: {:?}", *config);
+                config.save().unwrap();
+            }
+            Err(e) => {
+                log::error!("Could not load config {:?}", e);
+                log::info!("Using default config");
+                let _ = config_mtx.lock().unwrap().save();
+            }
         }
 
         let speed_event_config = config_mtx.clone();
