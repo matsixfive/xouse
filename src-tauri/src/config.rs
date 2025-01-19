@@ -131,6 +131,8 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
     let serialized = toml::to_string(config)?;
     let new_doc = serialized.parse::<toml_edit::Document>()?;
 
+    dbg!(&doc, &new_doc);
+
     log::info!("Diffing config");
 
     // Compare and update the document
