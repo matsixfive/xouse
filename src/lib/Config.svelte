@@ -24,7 +24,7 @@
 	// $: {if (config) config.actions = cfg}
 
 	onMount(async () => {
-		invoke("timing", { time_in: Date.now().toString() }).then((v) =>
+		invoke("timing", { timeIn: Date.now().toString() }).then((v) =>
 			console.log(v),
 		);
 
