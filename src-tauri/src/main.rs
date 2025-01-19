@@ -62,6 +62,8 @@ fn set_speed(state: tauri::State<AppState>, speed: f32) -> Result<(), String> {
 
 #[tauri::command]
 fn get_config(state: tauri::State<AppState>) -> Result<Config, String> {
+    log::info!("getting config");
     let config = state.config.lock().map_err(|e| e.to_string())?;
+    log::info!("got config: {:?}", *config);
     Ok(config.clone())
 }
