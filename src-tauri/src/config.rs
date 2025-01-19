@@ -146,13 +146,9 @@ fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<S
         log::info!("Checking key: {}", key);
         if let Some(old_value) = doc.get(key) {
             log::info!("Key exists: {}", key);
-            // If the value is different, update it
-            dbg!(&old_value, &new_value);
 
             if !deep_cmp(old_value, new_value) {
                 log::info!("Updating key: {}", key);
-                log::info!("Old: {:?}", old_value);
-                log::info!("New: {:?}", new_value);
                 doc[key] = new_value.clone();
             }
 
@@ -182,7 +178,6 @@ fn cmp_value(a: &toml_edit::Value, b: &toml_edit::Value) -> bool {
             inline_table_cmp(a, b)
         }
         _ => {
-            log::info!("{} != {}", a, b);
             false
         }
     }
@@ -213,7 +208,6 @@ fn deep_cmp(a: &toml_edit::Item, b: &toml_edit::Item) -> bool {
             a.iter().zip(b.iter()).all(|(a, b)| table_cmp(a, b))
         }
         _ => {
-            log::info!("{} !== {}", a, b);
             false
         }
     }
