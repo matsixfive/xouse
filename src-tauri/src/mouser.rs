@@ -7,7 +7,7 @@ use std::thread;
 use std::time::Duration;
 use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
-use crate::actions::{Action, SimpleActionFn, UpDownActionFn};
+use crate::actions::ActionFn;
 use crate::config::Config;
 
 fn ease(x: f32) -> f32 {
@@ -27,7 +27,10 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     let mut gilrs = Gilrs::new().unwrap();
 
     // print all connected gamepads
-    log::info!("Connected gamepads: {:?}", gilrs.gamepads().map(|(id, _)| id).collect::<Vec<_>>());
+    log::info!(
+        "Connected gamepads: {:?}",
+        gilrs.gamepads().map(|(id, _)| id).collect::<Vec<_>>()
+    );
 
     let support_ff = gilrs
         .gamepads()
@@ -118,10 +121,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
 
                     drop(config);
                     for action in actions {
-                        if let Err(e) = match action {
-                            Action::Simple(action) => action.call(&action_interface),
-                            Action::UpDown(action) => action.down(&action_interface),
-                        } {
+                        if let Err(e) = action.down(&action_interface) {
                             log::error!("Error: {:?}", e);
                         }
                     }
@@ -144,10 +144,7 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
 
                     drop(config);
                     for action in actions {
-                        if let Err(e) = match action {
-                            Action::UpDown(action) => action.up(&action_interface),
-                            _ => Ok(()),
-                        } {
+                        if let Err(e) = action.up(&action_interface) {
                             log::error!("Error: {:?}", e);
                         }
                     }

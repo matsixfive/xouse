@@ -31,65 +31,41 @@ impl Default for ActionMap {
                 // vec![Action::UpDown(UpDownAction::LuaScript {
                 //     script: String::from("print(number)\nnumber = number + 1"),
                 // })],
-                vec![Action::UpDown(UpDownAction::Click(MouseButton::Left))],
+                vec![Action::Click(MouseButton::Left)],
             ),
-            (
-                Button::East,
-                vec![Action::UpDown(UpDownAction::Click(MouseButton::Right))],
-            ),
+            (Button::East, vec![Action::Click(MouseButton::Right)]),
             (
                 Button::North,
-                vec![Action::UpDown(UpDownAction::KeyPress {
+                vec![Action::KeyPress {
                     key: rdev::Key::Space,
                     modifiers: vec![],
-                })],
+                }],
             ),
-            (
-                Button::DPadUp,
-                vec![
-                    Action::Simple(SimpleAction::SpeedInc),
-                    Action::Simple(SimpleAction::Rumble),
-                ],
-            ),
-            (
-                Button::DPadDown,
-                vec![
-                    Action::Simple(SimpleAction::SpeedDec),
-                    Action::Simple(SimpleAction::Rumble),
-                ],
-            ),
+            (Button::DPadUp, vec![Action::SpeedInc, Action::Rumble]),
+            (Button::DPadDown, vec![Action::SpeedDec, Action::Rumble]),
             (
                 Button::RightTrigger,
                 vec![
-                    Action::UpDown(UpDownAction::KeyPress {
+                    Action::KeyPress {
                         key: rdev::Key::Tab,
                         modifiers: vec![ModifierKey::Ctrl],
-                    }),
-                    Action::Simple(SimpleAction::Rumble),
+                    },
+                    Action::Rumble,
                 ],
             ),
             (
                 Button::LeftTrigger,
                 vec![
-                    Action::UpDown(UpDownAction::KeyPress {
+                    Action::KeyPress {
                         key: rdev::Key::Tab,
                         modifiers: vec![ModifierKey::Ctrl, ModifierKey::Shift],
-                    }),
-                    Action::Simple(SimpleAction::Rumble),
+                    },
+                    Action::Rumble,
                 ],
             ),
-            (
-                Button::RightTrigger2,
-                vec![Action::UpDown(UpDownAction::SpeedUp)],
-            ),
-            (
-                Button::LeftTrigger2,
-                vec![Action::UpDown(UpDownAction::SpeedDown)],
-            ),
-            (
-                Button::Select,
-                vec![Action::Simple(SimpleAction::ToggleVis)],
-            ),
+            (Button::RightTrigger2, vec![Action::SpeedUp]),
+            (Button::LeftTrigger2, vec![Action::SpeedDown]),
+            (Button::Select, vec![Action::ToggleVis]),
         ]);
         Self { map }
     }
@@ -160,22 +136,12 @@ pub fn deserialize_button(button: String) -> Button {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Action {
-    Simple(SimpleAction), // Triggered on button press
-    UpDown(UpDownAction), // Triggered on button press and release
-}
-
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub enum SimpleAction {
+pub enum Action {
     SpeedInc,
     SpeedDec,
     Rumble,
     ToggleVis,
-}
-
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub enum UpDownAction {
     Click(MouseButton),
     SpeedUp,
     SpeedDown,
@@ -217,26 +183,27 @@ pub enum ActionError {
     Other(String),
 }
 
-pub trait SimpleActionFn {
-    fn call(&self, state: &ActionInterface) -> Result<(), ActionError>;
+pub trait ActionFn {
+    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError>;
+    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError>;
 }
 
-impl SimpleActionFn for SimpleAction {
-    fn call(&self, interface: &ActionInterface) -> Result<(), ActionError> {
+impl ActionFn for Action {
+    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError> {
         match self {
-            SimpleAction::SpeedInc => {
+            Action::SpeedInc => {
                 log::info!(target: "actions", "speed inc");
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed += config.speed_step;
             }
-            SimpleAction::SpeedDec => {
+            Action::SpeedDec => {
                 log::info!(target: "actions", "speed dec");
                 let config = &mut *interface.config.lock().unwrap();
                 if config.speed > config.speed_step {
                     config.speed -= config.speed_step;
                 }
             }
-            SimpleAction::Rumble => {
+            Action::Rumble => {
                 log::info!(target: "actions", "rumble");
                 if let Some(rumbler) = &interface.rumble {
                     rumbler.rumble()?;
@@ -244,7 +211,7 @@ impl SimpleActionFn for SimpleAction {
                     return Err(ActionError::Other("no rumbler".to_string()));
                 }
             }
-            SimpleAction::ToggleVis => {
+            Action::ToggleVis => {
                 log::info!(target: "actions", "toggle vis");
                 let webview_window = &interface.window;
                 if let Ok(true) = webview_window.is_visible() {
@@ -254,20 +221,7 @@ impl SimpleActionFn for SimpleAction {
                     webview_window.set_focus()?;
                 }
             }
-        }
-        Ok(())
-    }
-}
-
-pub trait UpDownActionFn {
-    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError>;
-    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError>;
-}
-
-impl UpDownActionFn for UpDownAction {
-    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError> {
-        match self {
-            UpDownAction::Click(button) => match button {
+            Action::Click(button) => match button {
                 MouseButton::Left => {
                     log::info!(target: "actions", "left click");
                     unsafe {
@@ -287,17 +241,17 @@ impl UpDownActionFn for UpDownAction {
                     }
                 }
             },
-            UpDownAction::SpeedUp => {
+            Action::SpeedUp => {
                 log::info!(target: "actions", "speed up");
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
-            UpDownAction::SpeedDown => {
+            Action::SpeedDown => {
                 log::info!(target: "actions", "speed down");
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
             }
-            UpDownAction::KeyPress { key, modifiers } => {
+            Action::KeyPress { key, modifiers } => {
                 log::info!(target: "actions", "pressing {:?} with modifiers {:?}", key, modifiers);
                 for modifier in modifiers {
                     rdev::simulate(&rdev::EventType::KeyPress(modifier.into()))?;
@@ -305,7 +259,7 @@ impl UpDownActionFn for UpDownAction {
 
                 rdev::simulate(&rdev::EventType::KeyPress(*key))?;
             }
-            UpDownAction::LuaScript { script } => {
+            Action::LuaScript { script } => {
                 log::info!(target: "actions", "running lua script");
                 interface.lua.load(script.as_str()).exec()?;
             }
@@ -315,7 +269,7 @@ impl UpDownActionFn for UpDownAction {
 
     fn up(&self, interface: &ActionInterface) -> Result<(), ActionError> {
         match self {
-            UpDownAction::Click(button) => match button {
+            Action::Click(button) => match button {
                 MouseButton::Left => unsafe {
                     kbm::mouse_event(kbm::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                 },
@@ -326,22 +280,26 @@ impl UpDownActionFn for UpDownAction {
                     kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
                 },
             },
-            UpDownAction::SpeedUp => {
+            Action::SpeedUp => {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
             }
-            UpDownAction::SpeedDown => {
+            Action::SpeedDown => {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
-            UpDownAction::KeyPress { key, modifiers } => {
+            Action::KeyPress { key, modifiers } => {
                 rdev::simulate(&rdev::EventType::KeyRelease(*key))?;
 
                 for modifier in modifiers.iter().rev() {
                     rdev::simulate(&rdev::EventType::KeyRelease(modifier.into()))?;
                 }
             }
-            UpDownAction::LuaScript { script } => {}
+            Action::LuaScript { script } => {}
+            Action::SpeedInc => {}
+            Action::SpeedDec => {}
+            Action::Rumble => {}
+            Action::ToggleVis => {}
         }
         Ok(())
     }
