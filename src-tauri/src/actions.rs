@@ -28,10 +28,10 @@ impl Default for ActionMap {
         let map = HashMap::from([
             (
                 Button::South,
-                vec![Action::UpDown(UpDownAction::LuaScript {
-                    script: String::from("print(number)\nnumber = number + 1"),
-                })],
-                // vec![Action::UpDown(UpDownAction::Click(MouseButton::Left))],
+                // vec![Action::UpDown(UpDownAction::LuaScript {
+                //     script: String::from("print(number)\nnumber = number + 1"),
+                // })],
+                vec![Action::UpDown(UpDownAction::Click(MouseButton::Left))],
             ),
             (
                 Button::East,
