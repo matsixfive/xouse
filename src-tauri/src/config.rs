@@ -120,7 +120,7 @@ impl Config {
         let mut config = Self::default();
         config.config_dir = Some(config_dir_path);
 
-        log::info!("Loaded config");
+        log::info!("Loaded config"); 
         Ok(config)
     }
 }
