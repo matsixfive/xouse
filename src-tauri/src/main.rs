@@ -9,9 +9,7 @@ mod mouser;
 mod setup;
 
 use config::Config;
-use std::{
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 struct AppState {
     config: Arc<Mutex<Config>>,
@@ -30,7 +28,7 @@ fn main() {
                 ))
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::Webview,
-                ))
+                )).level(log::LevelFilter::Info)
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![get_speed, set_speed, get_config,])
