@@ -1,12 +1,13 @@
 use crate::config::Config;
 use gilrs::Button;
+use mouce::MouseActions;
 use std::{
     collections::HashMap,
+    path::PathBuf,
     sync::{Arc, Mutex},
 };
-use tauri::{Emitter, WebviewWindow};
+use tauri::{Manager, WebviewWindow};
 use thiserror::Error;
-use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
 #[derive(Clone, Debug)]
 pub struct ActionMap {
@@ -136,6 +137,20 @@ pub fn deserialize_button(button: String) -> Button {
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct LuaScript(String);
+
+impl LuaScript {
+    pub fn contents(&self, config_dir: PathBuf) -> Result<String, std::io::Error> {
+        let filename = self.0.as_str();
+        let path = config_dir
+            .join("scripts")
+            .join(filename)
+            .with_extension("lua");
+        std::fs::read_to_string(path)
+    }
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Action {
     SpeedInc,
     SpeedDec,
@@ -144,24 +159,25 @@ pub enum Action {
     Click(MouseButton),
     SpeedUp,
     SpeedDown,
+    SetSpeed(f32),
     KeyPress {
         key: rdev::Key,
         modifiers: Vec<ModifierKey>,
     },
     LuaScript {
-        script: String,
+        script: LuaScript,
     },
 }
 
-pub trait Rumbler {
-    fn rumble(&self) -> Result<(), gilrs::Error>;
-}
-
-pub struct ActionInterface<'lua> {
+//TODO: rumble implementation is stupid (uses two boxes etc)
+pub struct ActionInterface<'lua, R>
+where
+    R: Fn() -> Result<(), gilrs::ff::Error> + Send + Sync + 'static,
+{
     pub config: Arc<Mutex<Config>>,
     pub window: WebviewWindow,
-    pub lua: &'lua mlua::Lua,
-    pub rumble: Option<Box<dyn Rumbler>>,
+    pub rumble: Option<Rumble<R>>,
+    pub lua: Option<&'lua mlua::Lua>,
 }
 
 #[derive(Error, Debug)]
@@ -173,22 +189,34 @@ pub enum ActionError {
     Keypress(#[from] rdev::SimulateError),
 
     #[error("Rumble error: {0}")]
-    Rumble(#[from] gilrs::Error),
+    Rumble(#[from] gilrs::ff::Error),
 
     #[error("Tauri error: {0}")]
     Tauri(#[from] tauri::Error),
+
+    #[error("Mouce error: {0}")]
+    Mouce(#[from] mouce::error::Error),
+
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 
     #[error("Other error: {0}")]
     Other(String),
 }
 
-pub trait ActionFn {
-    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError>;
-    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError>;
+pub trait ActionFn<R>
+where
+    R: Fn() -> Result<(), gilrs::ff::Error> + Send + Sync + 'static,
+{
+    fn down(&self, interface: &ActionInterface<R>) -> Result<(), ActionError>;
+    fn up(&self, interface: &ActionInterface<R>) -> Result<(), ActionError>;
 }
 
-impl ActionFn for Action {
-    fn down(&self, interface: &ActionInterface) -> Result<(), ActionError> {
+impl<R> ActionFn<R> for Action
+where
+    R: Fn() -> Result<(), gilrs::ff::Error> + Send + Sync + 'static,
+{
+    fn down(&self, interface: &ActionInterface<R>) -> Result<(), ActionError> {
         match self {
             Action::SpeedInc => {
                 log::info!(target: "actions", "speed inc");
@@ -205,7 +233,7 @@ impl ActionFn for Action {
             Action::Rumble => {
                 log::info!(target: "actions", "rumble");
                 if let Some(rumbler) = &interface.rumble {
-                    rumbler.rumble()?;
+                    (rumbler.rumble)()?;
                 } else {
                     return Err(ActionError::Other("no rumbler".to_string()));
                 }
@@ -220,26 +248,6 @@ impl ActionFn for Action {
                     webview_window.set_focus()?;
                 }
             }
-            Action::Click(button) => match button {
-                MouseButton::Left => {
-                    log::info!(target: "actions", "left click");
-                    unsafe {
-                        kbm::mouse_event(kbm::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                    }
-                }
-                MouseButton::Right => {
-                    log::info!(target: "actions", "right click");
-                    unsafe {
-                        kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-                    }
-                }
-                MouseButton::Middle => {
-                    log::info!(target: "actions", "middle click");
-                    unsafe {
-                        kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
-                    }
-                }
-            },
             Action::SpeedUp => {
                 log::info!(target: "actions", "speed up");
                 let config = &mut *interface.config.lock().unwrap();
@@ -250,6 +258,12 @@ impl ActionFn for Action {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
             }
+            Action::SetSpeed(speed) => {
+                log::info!(target: "actions", "set speed to {}", speed);
+                let config = &mut *interface.config.lock().unwrap();
+                config.speed = *speed;
+            }
+            Action::Click(button) => mouce::Mouse::new().press_button(&button.into())?,
             Action::KeyPress { key, modifiers } => {
                 log::info!(target: "actions", "pressing {:?} with modifiers {:?}", key, modifiers);
                 for modifier in modifiers {
@@ -260,25 +274,17 @@ impl ActionFn for Action {
             }
             Action::LuaScript { script } => {
                 log::info!(target: "actions", "running lua script");
-                interface.lua.load(script.as_str()).exec()?;
+                if let Some(l) = interface.lua {
+                    let config_dir = Config::config_dir(interface.window.app_handle());
+                    l.load(script.contents(config_dir)?.as_str()).exec()?;
+                }
             }
         }
         Ok(())
     }
 
-    fn up(&self, interface: &ActionInterface) -> Result<(), ActionError> {
+    fn up(&self, interface: &ActionInterface<R>) -> Result<(), ActionError> {
         match self {
-            Action::Click(button) => match button {
-                MouseButton::Left => unsafe {
-                    kbm::mouse_event(kbm::MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                },
-                MouseButton::Right => unsafe {
-                    kbm::mouse_event(kbm::MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-                },
-                MouseButton::Middle => unsafe {
-                    kbm::mouse_event(kbm::MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
-                },
-            },
             Action::SpeedUp => {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult /= config.speed_up;
@@ -287,6 +293,7 @@ impl ActionFn for Action {
                 let config = &mut *interface.config.lock().unwrap();
                 config.speed_mult *= config.speed_up;
             }
+            Action::Click(button) => mouce::Mouse::new().release_button(&button.into())?,
             Action::KeyPress { key, modifiers } => {
                 rdev::simulate(&rdev::EventType::KeyRelease(*key))?;
 
@@ -294,11 +301,12 @@ impl ActionFn for Action {
                     rdev::simulate(&rdev::EventType::KeyRelease(modifier.into()))?;
                 }
             }
-            Action::LuaScript { script } => {}
-            Action::SpeedInc => {}
-            Action::SpeedDec => {}
-            Action::Rumble => {}
-            Action::ToggleVis => {}
+            Action::LuaScript { .. } => {}
+            Action::SpeedInc
+            | Action::SpeedDec
+            | Action::SetSpeed(_)
+            | Action::Rumble
+            | Action::ToggleVis => {}
         }
         Ok(())
     }
@@ -312,15 +320,9 @@ pub enum ModifierKey {
     Shift,
 }
 
-impl Into<rdev::Key> for ModifierKey {
-    fn into(self) -> rdev::Key {
-        <&ModifierKey>::into(&self)
-    }
-}
-
-impl Into<rdev::Key> for &ModifierKey {
-    fn into(self) -> rdev::Key {
-        match self {
+impl From<ModifierKey> for rdev::Key {
+    fn from(key: ModifierKey) -> rdev::Key {
+        match key {
             ModifierKey::Alt => rdev::Key::Alt,
             ModifierKey::Ctrl => rdev::Key::ControlLeft,
             ModifierKey::Win => rdev::Key::MetaLeft,
@@ -329,9 +331,43 @@ impl Into<rdev::Key> for &ModifierKey {
     }
 }
 
+impl From<&ModifierKey> for rdev::Key {
+    fn from(key: &ModifierKey) -> rdev::Key {
+        <ModifierKey>::into(*key)
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum MouseButton {
     Left,
     Right,
     Middle,
+}
+
+impl From<&MouseButton> for mouce::common::MouseButton {
+    fn from(button: &MouseButton) -> mouce::common::MouseButton {
+        match button {
+            MouseButton::Left => mouce::common::MouseButton::Left,
+            MouseButton::Right => mouce::common::MouseButton::Right,
+            MouseButton::Middle => mouce::common::MouseButton::Middle,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Rumble<R>
+where
+    R: Fn() -> Result<(), gilrs::ff::Error> + Send + Sync + 'static,
+{
+    rumble: Box<R>,
+}
+
+impl<R> Rumble<R>
+where
+    R: Fn() -> Result<(), gilrs::ff::Error> + Send + Sync + 'static,
+{
+    pub fn new(func: R) -> Self {
+        let rumble = Box::new(func);
+        Self { rumble }
+    }
 }

@@ -1,11 +1,10 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-// mod actions;
 mod actions;
 mod config;
 mod lua;
-mod mouser;
+mod perform;
 mod setup;
 
 use config::Config;
@@ -16,6 +15,7 @@ struct AppState {
 }
 
 fn main() {
+    log::info!("starting tauri app");
     // use the default config
     // later will try to load the config from a file
     let config_mtx = Arc::new(Mutex::new(Config::default()));
@@ -33,7 +33,7 @@ fn main() {
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
-            get_speed, set_speed, get_config, timing
+            save_config, get_speed, set_speed, get_config, timing
         ])
         .manage(AppState {
             config: Arc::clone(&config_mtx),
@@ -47,6 +47,13 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn save_config(state: tauri::State<AppState>) -> Result<(), String> {
+    let config = state.config.lock().map_err(|e| e.to_string())?;
+    config.save().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -64,9 +71,8 @@ fn set_speed(state: tauri::State<AppState>, speed: f32) -> Result<(), String> {
 
 #[tauri::command]
 fn get_config(state: tauri::State<AppState>) -> Result<Config, String> {
-    log::info!("getting config");
     let config = state.config.lock().map_err(|e| e.to_string())?;
-    log::info!("got config: {:?}", *config);
+    // log::info!("got config: {:?}", *config);
     Ok(config.clone())
 }
 

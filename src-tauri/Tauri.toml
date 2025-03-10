@@ -1,0 +1,40 @@
+# https://v2.tauri.app/reference/config
+
+productName = "Xouse"
+identifier = "com.matsixfive.xouse"
+
+[build]
+beforeBuildCommand = "npm run build"
+beforeDevCommand = "npm run dev"
+frontendDist = "../dist"
+devUrl = "http://localhost:5173"
+
+[bundle]
+active = true
+category = "Utility"
+targets = "all"
+icon = [
+  "icons/32x32.png",
+  "icons/128x128.png",
+  "icons/128x128@2x.png",
+  "icons/icon.icns",
+  "icons/icon.ico"
+]
+shortDescription = "An app for controlling your computer with a controller"
+longDescription = "This app allows you to control your computer with a controller. It is designed to be easy to use and customizable. It is also open source and free to use. You can set up keypresses and mouse actions, as well as run lua scripts."
+copyright = ""
+publisher = "matsixfive"
+
+[[app.windows]]
+title = "Xouse"
+width = 800
+height = 600
+fullscreen = false
+resizable = true
+visible = false
+useHttpsScheme = true
+
+[app.trayIcon]
+iconPath = "icons/icon.png"
+iconAsTemplate = true
+menuOnLeftClick = false

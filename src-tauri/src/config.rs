@@ -1,6 +1,6 @@
 use crate::actions::ActionMap;
 use anyhow::{anyhow, Result};
-use std::{io::Write, path::PathBuf};
+use std::{io::Write, path::{Path, PathBuf}};
 use tauri::{AppHandle, Manager};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -74,7 +74,7 @@ impl Config {
         Some(self.config_dir.as_ref()?.join("config.toml"))
     }
 
-    pub fn with_config_file(config_dir: &PathBuf) -> PathBuf {
+    pub fn with_config_file(config_dir: &Path) -> PathBuf {
         config_dir.join("config.toml")
     }
 
@@ -86,20 +86,20 @@ impl Config {
 
         log::info!("Saving config at {:?}", config_dir);
 
-        std::fs::create_dir_all(&config_dir)?;
+        std::fs::create_dir_all(config_dir)?;
 
         let config_file_path = self.config_file().ok_or(anyhow!("Config file not set"))?;
-        if let Ok(contents) = std::fs::read_to_string(&config_file_path) {
-            if let Ok(diff) = diff(self, &contents) {
-                let mut config_file = std::fs::File::create(&config_file_path)?;
-                config_file.write_all(diff.as_bytes())?;
-                return Ok(());
-            } else {
-                log::error!("Could not diff config file");
-            }
-        } else {
-            log::error!("Could not read config file");
-        }
+        // if let Ok(contents) = std::fs::read_to_string(&config_file_path) {
+        //     if let Ok(diff) = diff(self, &contents) {
+        //         let mut config_file = std::fs::File::create(&config_file_path)?;
+        //         config_file.write_all(diff.as_bytes())?;
+        //         return Ok(());
+        //     } else {
+        //         log::error!("Could not diff config file");
+        //     }
+        // } else {
+        //     log::error!("Could not read config file");
+        // }
 
         let stringified = toml::to_string(&self)?;
         let mut config_file = std::fs::File::create(&config_file_path)?;
@@ -124,83 +124,83 @@ impl Config {
     }
 }
 
-fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<String> {
-    let mut doc = toml_content.parse::<toml_edit::Document>()?;
-
-    let serialized = toml::to_string(config)?;
-    let new_doc = serialized.parse::<toml_edit::Document>()?;
-
-    println!(
-        "doc:\n{}\n\nnew:\n{}",
-        &doc.to_string(),
-        &new_doc.to_string()
-    );
-
-    log::info!("Diffing config");
-
-    for (key, new_value) in new_doc.iter() {
-        log::info!("Checking key: {}", key);
-        if let Some(old_value) = doc.get(key) {
-            log::info!("Key exists: {}", key);
-
-            if !deep_cmp(old_value, new_value) {
-                log::info!("Updating key: {}", key);
-                doc[key] = new_value.clone();
-            }
-        } else {
-            // If the key doesn't exist, add it
-            doc[key] = new_value.clone();
-        }
-    }
-
-    // Return the new TOML content as a string
-
-    Ok(doc.to_string())
-}
-
-fn cmp_value(a: &toml_edit::Value, b: &toml_edit::Value) -> bool {
-    match (a, b) {
-        (toml_edit::Value::String(a), toml_edit::Value::String(b)) => a.value() == b.value(),
-        (toml_edit::Value::Integer(a), toml_edit::Value::Integer(b)) => a.value() == b.value(),
-        (toml_edit::Value::Float(a), toml_edit::Value::Float(b)) => a.value() == b.value(),
-        (toml_edit::Value::Boolean(a), toml_edit::Value::Boolean(b)) => a.value() == b.value(),
-        (toml_edit::Value::Datetime(a), toml_edit::Value::Datetime(b)) => a.value() == b.value(),
-        (toml_edit::Value::Array(a), toml_edit::Value::Array(b)) => array_cmp(a, b),
-        (toml_edit::Value::InlineTable(a), toml_edit::Value::InlineTable(b)) => {
-            inline_table_cmp(a, b)
-        }
-        _ => {
-            false
-        }
-    }
-}
-
-fn array_cmp(a: &toml_edit::Array, b: &toml_edit::Array) -> bool {
-    a.iter().zip(b.iter()).all(|(a, b)| cmp_value(a, b))
-}
-
-fn table_cmp(a: &toml_edit::Table, b: &toml_edit::Table) -> bool {
-    a.iter()
-        .all(|(k, v)| b.get(k).map_or(false, |bv| deep_cmp(v, bv)))
-}
-
-fn inline_table_cmp(a: &toml_edit::InlineTable, b: &toml_edit::InlineTable) -> bool {
-    a.iter()
-        .all(|(k, v)| b.get(k).map_or(false, |bv| cmp_value(v, bv)))
-}
-
-fn deep_cmp(a: &toml_edit::Item, b: &toml_edit::Item) -> bool {
-    match (a, b) {
-        (toml_edit::Item::None, toml_edit::Item::None) => true,
-        (toml_edit::Item::Value(a), toml_edit::Item::Value(b)) => cmp_value(a, b),
-        (toml_edit::Item::Table(a), toml_edit::Item::Table(b)) => a
-            .iter()
-            .all(|(k, v)| b.get(k).map_or(false, |bv| deep_cmp(v, bv))),
-        (toml_edit::Item::ArrayOfTables(a), toml_edit::Item::ArrayOfTables(b)) => {
-            a.iter().zip(b.iter()).all(|(a, b)| table_cmp(a, b))
-        }
-        _ => {
-            false
-        }
-    }
-}
+// fn diff<T: serde::Serialize>(config: &T, toml_content: &str) -> anyhow::Result<String> {
+//     let mut doc = toml_content.parse::<toml_edit::Document>()?;
+//
+//     let serialized = toml::to_string(config)?;
+//     let new_doc = serialized.parse::<toml_edit::Document>()?;
+//
+//     println!(
+//         "doc:\n{}\n\nnew:\n{}",
+//         &doc.to_string(),
+//         &new_doc.to_string()
+//     );
+//
+//     log::info!("Diffing config");
+//
+//     for (key, new_value) in new_doc.iter() {
+//         log::info!("Checking key: {}", key);
+//         if let Some(old_value) = doc.get(key) {
+//             log::info!("Key exists: {}", key);
+//
+//             if !deep_cmp(old_value, new_value) {
+//                 log::info!("Updating key: {}", key);
+//                 doc[key] = new_value.clone();
+//             }
+//         } else {
+//             // If the key doesn't exist, add it
+//             doc[key] = new_value.clone();
+//         }
+//     }
+//
+//     // Return the new TOML content as a string
+//
+//     Ok(doc.to_string())
+// }
+//
+// fn cmp_value(a: &toml_edit::Value, b: &toml_edit::Value) -> bool {
+//     match (a, b) {
+//         (toml_edit::Value::String(a), toml_edit::Value::String(b)) => a.value() == b.value(),
+//         (toml_edit::Value::Integer(a), toml_edit::Value::Integer(b)) => a.value() == b.value(),
+//         (toml_edit::Value::Float(a), toml_edit::Value::Float(b)) => a.value() == b.value(),
+//         (toml_edit::Value::Boolean(a), toml_edit::Value::Boolean(b)) => a.value() == b.value(),
+//         (toml_edit::Value::Datetime(a), toml_edit::Value::Datetime(b)) => a.value() == b.value(),
+//         (toml_edit::Value::Array(a), toml_edit::Value::Array(b)) => array_cmp(a, b),
+//         (toml_edit::Value::InlineTable(a), toml_edit::Value::InlineTable(b)) => {
+//             inline_table_cmp(a, b)
+//         }
+//         _ => {
+//             false
+//         }
+//     }
+// }
+//
+// fn array_cmp(a: &toml_edit::Array, b: &toml_edit::Array) -> bool {
+//     a.iter().zip(b.iter()).all(|(a, b)| cmp_value(a, b))
+// }
+//
+// fn table_cmp(a: &toml_edit::Table, b: &toml_edit::Table) -> bool {
+//     a.iter()
+//         .all(|(k, v)| b.get(k).map_or(false, |bv| deep_cmp(v, bv)))
+// }
+//
+// fn inline_table_cmp(a: &toml_edit::InlineTable, b: &toml_edit::InlineTable) -> bool {
+//     a.iter()
+//         .all(|(k, v)| b.get(k).map_or(false, |bv| cmp_value(v, bv)))
+// }
+//
+// fn deep_cmp(a: &toml_edit::Item, b: &toml_edit::Item) -> bool {
+//     match (a, b) {
+//         (toml_edit::Item::None, toml_edit::Item::None) => true,
+//         (toml_edit::Item::Value(a), toml_edit::Item::Value(b)) => cmp_value(a, b),
+//         (toml_edit::Item::Table(a), toml_edit::Item::Table(b)) => a
+//             .iter()
+//             .all(|(k, v)| b.get(k).map_or(false, |bv| deep_cmp(v, bv))),
+//         (toml_edit::Item::ArrayOfTables(a), toml_edit::Item::ArrayOfTables(b)) => {
+//             a.iter().zip(b.iter()).all(|(a, b)| table_cmp(a, b))
+//         }
+//         _ => {
+//             false
+//         }
+//     }
+// }

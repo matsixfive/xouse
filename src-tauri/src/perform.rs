@@ -1,13 +1,12 @@
 use anyhow::Result;
-use gilrs::ff;
-use gilrs::{ev::Axis, Event, EventType, Gilrs};
+use gilrs::{ev::Axis, ff, Event, EventType, Gilrs};
+use mouce::{self, Mouse, MouseActions};
 use std::mem::drop;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use windows::Win32::UI::Input::KeyboardAndMouse as kbm;
 
-use crate::actions::ActionFn;
+use crate::actions::{ActionFn, ActionInterface, Rumble};
 use crate::config::Config;
 
 fn ease(x: f32) -> f32 {
@@ -57,10 +56,10 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         .unwrap();
     effect.set_repeat(ff::Repeat::For(duration)).unwrap();
 
-    let rumble: Arc<Box<dyn Fn() + Send + Sync>> = Arc::new(Box::new(move || {
+    let rumble = Rumble::new(move || {
         log::info!("rumbling");
-        let _ = effect.play();
-    }));
+        effect.play()
+    });
 
     let mut l_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
     let mut r_stick = Vec2::<f32> { x: 0.0, y: 0.0 };
@@ -71,12 +70,20 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
     // window.emit("speed_change", config.speed)?;
     drop(config);
 
-    let lua_ctx = crate::lua::init_lua().unwrap();
+    let lua_interface = crate::lua::LuaInterface {
+        config: config_mx.clone(),
+        window: window.clone(),
+        rumble: Some(rumble.clone()),
+    };
+    let lua_ctx = crate::lua::init_lua(lua_interface).unwrap();
+
+    let mouse = Mouse::new();
 
     let mut has_debug_logged = false;
     loop {
         let mut config = config_mx.lock().unwrap();
 
+        // TODO: allow changing gamepad instead of just using the first one
         match (gilrs.gamepads().next(), config.gamepad_id) {
             (Some((gamepad_id, _gamepad)), None) => {
                 config.gamepad_id = Some(gamepad_id);
@@ -87,11 +94,15 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                 l_stick = Vec2::default();
                 r_stick = Vec2::default();
                 remainder = Vec2::default();
+
                 if !has_debug_logged {
                     log::debug!("No gamepad connected");
                     has_debug_logged = true;
                 }
-                thread::sleep(Duration::from_millis(1000));
+
+                // drop the lock before sleeping
+                drop(config);
+                thread::sleep(Duration::from_millis(2000));
                 continue;
             }
             _ => {}
@@ -102,10 +113,12 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
             match config.gamepad_id {
                 Some(id) => {
                     if event.id != id {
+                        // ignore events from other gamepads
                         continue;
                     }
                 }
                 None => {
+                    // set the gamepad id if it's not set
                     config.gamepad_id = Some(event.id);
                 }
             }
@@ -116,21 +129,24 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     ..
                 } => {
                     let actions = config.actions[button].clone();
-                    // dbg!(&actions, &button);
 
-                    let action_interface = crate::actions::ActionInterface {
+                    let action_interface = ActionInterface {
                         config: config_mx.clone(),
                         window: window.clone(),
-                        lua: &lua_ctx,
-                        rumble: None,
+                        lua: Some(&lua_ctx),
+                        rumble: Some(rumble.clone()),
                     };
 
+                    // drop the lock before calling the actions
                     drop(config);
+
                     for action in actions {
                         if let Err(e) = action.down(&action_interface) {
                             log::error!("Error: {:?}", e);
                         }
                     }
+
+                    // reacquire the lock
                     config = config_mx.lock().unwrap();
                 }
 
@@ -139,21 +155,27 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
                     ..
                 } => {
                     let actions = config.actions[button].clone();
-                    // dbg!(&actions, &button);
 
-                    let action_interface = crate::actions::ActionInterface {
+                    let action_interface: ActionInterface<
+                        '_,
+                        fn() -> Result<(), gilrs::ff::Error>,
+                    > = ActionInterface {
                         config: config_mx.clone(),
                         window: window.clone(),
-                        lua: &lua_ctx,
+                        lua: Some(&lua_ctx),
                         rumble: None,
                     };
 
+                    // drop the lock before calling the actions
                     drop(config);
+
                     for action in actions {
                         if let Err(e) = action.up(&action_interface) {
                             log::error!("Error: {:?}", e);
                         }
                     }
+
+                    // reacquire the lock
                     config = config_mx.lock().unwrap();
                 }
                 Event {
@@ -192,26 +214,18 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
         remainder.y = y_rem;
 
         if (dx != 0) || (dy != 0) {
-            unsafe {
-                kbm::mouse_event(kbm::MOUSEEVENTF_MOVE, dx, dy, 0, 0);
-            }
+            mouse.move_relative(dx, dy)?;
         }
 
-        unsafe {
-            kbm::mouse_event(
-                kbm::MOUSEEVENTF_WHEEL,
-                0,
-                0,
-                integer_and_fractional(r_stick.y * 3.2 * config.speed_mult).0,
-                0,
-            );
-            kbm::mouse_event(
-                kbm::MOUSEEVENTF_HWHEEL,
-                0,
-                0,
-                integer_and_fractional(r_stick.x * 3.2 * config.speed_mult).0,
-                0,
-            );
+        if r_stick.y > 0.5 {
+            mouse.scroll_wheel(&mouce::common::ScrollDirection::Up)?;
+        } else if r_stick.y < -0.5 {
+            mouse.scroll_wheel(&mouce::common::ScrollDirection::Down)?;
+        }
+        if r_stick.x > 0.5 {
+            mouse.scroll_wheel(&mouce::common::ScrollDirection::Right)?;
+        } else if r_stick.x < -0.5 {
+            mouse.scroll_wheel(&mouce::common::ScrollDirection::Left)?;
         }
 
         drop(config);
@@ -222,9 +236,9 @@ pub fn start(window: tauri::WebviewWindow, config_mx: Arc<Mutex<Config>>) -> Res
 fn integer_and_fractional(num: f32) -> (i32, f32) {
     if num >= 0.0 {
         // positive
-        return (num.floor() as i32, num % 1.0);
+        (num.floor() as i32, num % 1.0)
     } else {
         // negative
-        return (num.ceil() as i32, num % 1.0);
+        (num.ceil() as i32, num % 1.0)
     }
 }

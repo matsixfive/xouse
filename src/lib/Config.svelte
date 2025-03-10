@@ -82,7 +82,9 @@
 
 <form
 	on:submit|preventDefault={() => {
+		console.log("saving config");
 		emit("save_config");
+		invoke("save_config");
 	}}
 >
 	<input
