@@ -14,3 +14,5 @@ Run windows dev server
 cmd.exe '/C' 'cd <windows_style_dev_path> && npm i && cargo tauri dev'
 ```
 
+## TODO:
+- [ ] Shortcut for toggling between 'xouse' mode and controller mode.
