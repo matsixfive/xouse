@@ -137,6 +137,7 @@ pub fn deserialize_button(button: String) -> Button {
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
 pub struct LuaScript(String);
 
 impl LuaScript {
@@ -152,19 +153,30 @@ impl LuaScript {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Action {
+    #[serde(rename = "speed_inc")]
     SpeedInc,
+    #[serde(rename = "speed_dec")]
     SpeedDec,
+    #[serde(rename = "rumble")]
     Rumble,
+    #[serde(rename = "toggle_vis")]
     ToggleVis,
+    #[serde(rename = "click")]
     Click(MouseButton),
+    #[serde(rename = "speed_up")]
     SpeedUp,
+    #[serde(rename = "speed_down")]
     SpeedDown,
+    #[serde(rename = "set_speed")]
     SetSpeed(f32),
+    #[serde(rename = "keypress")]
     KeyPress {
         key: rdev::Key,
         modifiers: Vec<ModifierKey>,
     },
+    #[serde(rename = "lua_script")]
     LuaScript {
+        #[serde(rename = "path")]
         script: LuaScript,
     },
 }
