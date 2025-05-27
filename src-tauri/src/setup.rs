@@ -44,7 +44,7 @@ pub fn setup(
             Ok(new_config) => {
                 let mut config = config_mtx.lock().unwrap();
                 *config = new_config;
-                log::info!("Loaded config: {:?}", *config);
+                log::info!("Loaded config: {:#?}", *config);
                 config.save().unwrap();
             }
             Err(e) => {

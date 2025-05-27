@@ -1,9 +1,10 @@
 use std::sync::{Arc, Mutex};
 
+use mlua::Value;
 use tauri::WebviewWindow;
 
 use crate::{
-    actions::{ActionFn, ActionInterface, Rumble},
+    actions::{Action, ActionFn, ActionInterface, Rumble},
     config::Config,
 };
 
@@ -13,26 +14,76 @@ where
 {
     let lua = mlua::Lua::new();
 
-    let f = lua.create_function(|_, ()| -> mlua::Result<i32> {
-        println!("running 69");
-        Ok(69)
-    })?;
-    lua.globals().set("rust_func", f)?;
+    let metatable = lua.create_table()?;
 
-    let set_speed = lua.create_function(move |_, speed: f32| -> mlua::Result<()> {
-        crate::actions::Action::SetSpeed(speed)
-            .down(&ctx.clone().into())
-            .map_err(|e| mlua::Error::external(e.to_string()))
-    })?;
-    lua.globals().set("set_speed", set_speed)?;
+    // __index: When Lua reads a global
+    let index_config = ctx.config.clone();
+    metatable.set(
+        "__index",
+        lua.create_function(move |_, (_table, key): (mlua::Table, mlua::String)| {
+            match key.to_str() {
+                Ok("speed") => {
+                    let speed = index_config.lock().unwrap().speed;
+                    Ok(mlua::Value::Number(speed.into()))
+                }
+                _ => Ok(mlua::Value::Nil),
+            }
+        })?,
+    )?;
 
-    let log = lua.create_function(move |_, input: String| -> mlua::Result<()> {
-        log::info!(target: "lua_log", "{}", input);
+    // __newindex: When Lua assigns to a global
+    let newindex_config = ctx.config.clone();
+    metatable.set("__newindex", lua.create_function(
+        move |_, (table, key, value): (mlua::Table, mlua::String, mlua::Value)| {
+            match key.to_str() {
+                Ok("speed") => {
+                    match value {
+                        Value::Number(f) => {
+                            let config = &mut newindex_config.lock().unwrap();
+                            config.speed = f as f32;
+                            println!("speed assigned to {}", f);
+                        }
+                        Value::Integer(i) => {
+                            let config = &mut newindex_config.lock().unwrap();
+                            config.speed = i as f32;
+                            println!("speed assigned to {}", i);
+                        }
+                        _ => {
+                            log::warn!(target: "lua_callback_log", "Invalid type for speed: {:?}", value);
+                            return Err(mlua::Error::FromLuaConversionError {
+                                from: value.type_name(),
+                                to: "number",
+                                message: Some("Expected a number or integer for speed".to_string()),
+                            });
+                        }
+                    }
+                }
+                _ => {
+                    table.raw_set(key, value)?;
+                }
+            }
+            Ok(())
+        },
+    )?)?;
+
+    lua.globals().set_metatable(Some(metatable));
+
+    let log = lua.create_function(move |_, input: Option<String>| -> mlua::Result<()> {
+        match input {
+            Some(s) => log::info!(target: "lua_log", "{}", s),
+            None => log::info!(target: "lua_log", "log called with no argument or nil"),
+        }
         Ok(())
     })?;
-    lua.globals().set("log", log)?;
+    lua.globals().set("consolelog", log)?;
 
-    lua.globals().set("number", 1)?;
+    let rumble = lua.create_function(move |_, _: mlua::Value| -> mlua::Result<()> {
+        _ = Action::Rumble.down(&ctx.clone().into());
+        _ = Action::Rumble.up(&ctx.clone().into());
+        Ok(())
+    })?;
+    lua.globals().set("rumble", rumble)?;
+
 
     Ok(lua)
 }

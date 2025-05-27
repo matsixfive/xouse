@@ -28,10 +28,10 @@ impl Default for ActionMap {
         let map = HashMap::from([
             (
                 Button::South,
-                // vec![Action::UpDown(UpDownAction::LuaScript {
-                //     script: String::from("print(number)\nnumber = number + 1"),
-                // })],
-                vec![Action::Click(MouseButton::Left)],
+                vec![Action::LuaScript {
+                    script: LuaScript("test.lua".to_string()),
+                }],
+                // vec![Action::Click(MouseButton::Left)],
             ),
             (Button::East, vec![Action::Click(MouseButton::Right)]),
             (
@@ -217,6 +217,7 @@ where
     R: Fn() -> Result<(), gilrs::ff::Error> + Send + Sync + 'static,
 {
     fn down(&self, interface: &ActionInterface<R>) -> Result<(), ActionError> {
+        log::info!(target: "actions", "action down: {:?}", self);
         match self {
             Action::SpeedInc => {
                 log::info!(target: "actions", "speed inc");
@@ -273,7 +274,6 @@ where
                 rdev::simulate(&rdev::EventType::KeyPress(*key))?;
             }
             Action::LuaScript { script } => {
-                log::info!(target: "actions", "running lua script");
                 if let Some(l) = interface.lua {
                     let config_dir = Config::config_dir(interface.window.app_handle());
                     l.load(script.contents(config_dir)?.as_str()).exec()?;
@@ -284,6 +284,7 @@ where
     }
 
     fn up(&self, interface: &ActionInterface<R>) -> Result<(), ActionError> {
+        log::info!(target: "actions", "action up: {:?}", self);
         match self {
             Action::SpeedUp => {
                 let config = &mut *interface.config.lock().unwrap();
